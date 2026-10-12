@@ -24,6 +24,8 @@ export default function MapCanvas({
   colours,
   theme = null,
   halos = [],
+  onLink,
+  onLongPress,
   ref,
 }: {
   graph: Graph;
@@ -37,6 +39,10 @@ export default function MapCanvas({
   theme?: string | null;
   /** Soft areas drawn behind groups of dots */
   halos?: { key: string; colour: string; ids: string[] }[];
+  /** Dragged from the picked note's ＋ handle onto another dot */
+  onLink?: (from: string, to: string) => void;
+  /** Held a finger on empty space; world coordinates */
+  onLongPress?: (x: number, y: number) => void;
   ref?: Ref<MapHandle>;
 }) {
   const box = useRef<HTMLDivElement>(null);
@@ -145,7 +151,7 @@ export default function MapCanvas({
   // ---- Gestures ----
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const gesture = useRef<{
-    kind: "none" | "pan" | "dot" | "pinch";
+    kind: "none" | "pan" | "dot" | "pinch" | "link";
     node?: string;
     start: { x: number; y: number };
     view: View;
@@ -154,6 +160,14 @@ export default function MapCanvas({
     mid?: { x: number; y: number };
     movedFar: boolean;
   } | null>(null);
+
+  // The line you're pulling out of a note to link it, in map coordinates
+  const [rubber, setRubber] = useState<{ from: string; x: number; y: number; over?: string } | null>(null);
+  const hold = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const toWorld = (q: { x: number; y: number }) => {
+    const v = viewRef.current!;
+    return { x: (q.x - v.x) / v.k, y: (q.y - v.y) / v.k };
+  };
 
   const local = (e: { clientX: number; clientY: number }) => {
     const r = box.current!.getBoundingClientRect();
@@ -182,8 +196,18 @@ export default function MapCanvas({
     }
     const p = local(e);
     pointers.current.set(e.pointerId, p);
-    if (pointers.current.size === 2) return startPinch();
+    clearTimeout(hold.current);
+    if (pointers.current.size === 2) {
+      setRubber(null);
+      return startPinch();
+    }
     if (pointers.current.size > 2) return;
+    if ((e.target as Element).closest("[data-handle]") && selected) {
+      const from = pos(selected)!;
+      gesture.current = { kind: "link", node: selected, start: p, view: viewRef.current, movedFar: true };
+      setRubber({ from: selected, x: from.x, y: from.y });
+      return;
+    }
     const node = (e.target as Element).closest("[data-node]")?.getAttribute("data-node") ?? undefined;
     gesture.current = {
       kind: node ? "dot" : "pan",
@@ -193,6 +217,14 @@ export default function MapCanvas({
       nodeStart: node ? (pos(node) ?? undefined) : undefined,
       movedFar: false,
     };
+    if (!node && onLongPress) {
+      const g = gesture.current;
+      hold.current = setTimeout(() => {
+        if (gesture.current !== g || g.movedFar || pointers.current.size !== 1) return;
+        gesture.current = null;
+        onLongPress(toWorld(g.start).x, toWorld(g.start).y);
+      }, 500);
+    }
   };
 
   const move = (e: React.PointerEvent) => {
@@ -213,10 +245,23 @@ export default function MapCanvas({
       apply({ k, x: mid.x - wx * k, y: mid.y - wy * k });
       return;
     }
+    if (g.kind === "link") {
+      // Near an edge: slide the map so dots off screen can be reached
+      const edge = 44;
+      const push = (v: number, max: number) => (v < edge ? edge - v : v > max - edge ? max - edge - v : 0) * 0.35;
+      const sx = push(p.x, size.w);
+      const sy = push(p.y, size.h - bottomInset);
+      if (sx || sy) apply({ ...viewRef.current!, x: viewRef.current!.x + sx, y: viewRef.current!.y + sy });
+      const w = toWorld(p);
+      const over = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-node]")?.getAttribute("data-node") ?? undefined;
+      setRubber({ from: g.node!, x: w.x, y: w.y, over: over !== g.node ? over : undefined });
+      return;
+    }
     const dx = p.x - g.start.x;
     const dy = p.y - g.start.y;
     if (!g.movedFar && Math.hypot(dx, dy) < TAP) return;
     g.movedFar = true;
+    clearTimeout(hold.current);
     if (g.kind === "pan") apply({ ...g.view, x: g.view.x + dx, y: g.view.y + dy });
     else if (g.kind === "dot" && g.node && g.nodeStart) {
       const k = viewRef.current!.k;
@@ -234,6 +279,12 @@ export default function MapCanvas({
       return;
     }
     gesture.current = null;
+    clearTimeout(hold.current);
+    if (g?.kind === "link") {
+      if (rubber?.over && e.type !== "pointercancel") onLink?.(g.node!, rubber.over);
+      setRubber(null);
+      return;
+    }
     if (!g || e.type === "pointercancel") return;
     if (!g.movedFar) {
       onSelect(g.kind === "dot" && g.node ? (g.node === selected ? null : g.node) : null);
@@ -376,6 +427,41 @@ export default function MapCanvas({
                 </g>
               );
             })}
+            {rubber && (
+              <line
+                x1={xy(rubber.from).x}
+                y1={xy(rubber.from).y}
+                x2={rubber.over ? xy(rubber.over).x : rubber.x}
+                y2={rubber.over ? xy(rubber.over).y : rubber.y}
+                stroke="var(--accent)"
+                strokeWidth={2.5 / Math.sqrt(k)}
+                strokeDasharray="6 4"
+                className="pointer-events-none"
+              />
+            )}
+            {rubber?.over && (
+              <circle
+                cx={xy(rubber.over).x}
+                cy={xy(rubber.over).y}
+                r={dotRadius(graph.nodes.find((n) => n.id === rubber.over)!) + 7}
+                fill="none"
+                stroke="var(--accent)"
+                strokeWidth={2.5}
+                className="pointer-events-none"
+              />
+            )}
+            {picked?.note && onLink && !rubber && (
+              <g
+                data-handle
+                aria-label="Drag to link"
+                transform={`translate(${xy(picked.id).x + (dotRadius(picked) + 12) * 0.75},${xy(picked.id).y - (dotRadius(picked) + 12) * 0.75})`}
+                className="cursor-crosshair"
+              >
+                <circle r={18 / Math.max(k, 0.8)} fill="transparent" />
+                <circle r={10} fill="#fffff8" stroke="var(--accent)" strokeWidth={1.8} />
+                <path d="M-4.5 0H4.5M0 -4.5V4.5" stroke="var(--accent)" strokeWidth={1.8} strokeLinecap="round" />
+              </g>
+            )}
           </g>
         )}
       </svg>

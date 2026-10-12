@@ -7,7 +7,7 @@ import NoteView from "@/components/notes/NoteView";
 import NoteEditor from "@/components/notes/NoteEditor";
 import NotesMap from "@/components/notes/NotesMap";
 import NotesTimeline from "@/components/notes/NotesTimeline";
-import { findNote, freeId, type Note } from "@/lib/notes";
+import { appendSeeAlso, findNote, freeId, type Note } from "@/lib/notes";
 import { NotesContext } from "@/components/notes/rich/context";
 import { createNote, deleteNote, saveNote, subscribeNotes } from "./notes-store";
 import { back, navigate, usePath } from "./router";
@@ -106,7 +106,27 @@ function Screen({ path, status, notes }: { path: string; status: Status; notes: 
     if (status !== "ready") return <p className={`${wrap} pt-10 font-mono text-[13px] text-[#777]`}>Loading…</p>;
     return <NewNote key={title} notes={notes} initialTitle={title} />;
   }
-  if (route === "/map") return <NotesMap notes={notes} positions={positions} onSavePositions={saveLayout} />;
+  if (route === "/map")
+    return (
+      <NotesMap
+        notes={notes}
+        positions={positions}
+        onSavePositions={saveLayout}
+        onOpen={(to) => navigate(to)}
+        onLink={async (from, toTitle) => {
+          await saveNote(appendSeeAlso(from, toTitle), from.title, notes);
+          return () => saveNote(from, from.title, notes);
+        }}
+        onCreate={async (title) => {
+          const existing = findNote(notes, title);
+          if (existing) return existing.id;
+          const now = new Date().toISOString();
+          const note: Note = { id: freeId(notes, title), title, body: "", tags: [], created: now, updated: now };
+          await createNote(note);
+          return note.id;
+        }}
+      />
+    );
   if (route === "/timeline") return <NotesTimeline notes={notes} />;
   if (route === "/settings") return <Settings notes={notes} onRestore={restore} />;
   if (route === "/about")

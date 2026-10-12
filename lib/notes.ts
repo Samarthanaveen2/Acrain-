@@ -197,3 +197,21 @@ export function parseTags(text: string) {
 
 export const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+/** Adds a link to `title` on a "See also:" line at the end of the note (made if missing) */
+export function appendSeeAlso(note: Note, title: string): Note {
+  if (!note.doc) {
+    const body = note.body.trimEnd();
+    const last = body.split("\n").pop() ?? "";
+    const next = /^See also:/.test(last) ? `${body}, [[${title}]]` : `${body}${body ? "\n\n" : ""}See also: [[${title}]]`;
+    return { ...note, body: next };
+  }
+  const link: RichDoc = { type: "noteLink", attrs: { title } };
+  const content = [...(note.doc.content ?? [])];
+  const last = content[content.length - 1];
+  const isSeeAlso = last?.type === "paragraph" && last.content?.[0]?.type === "text" && /^See also:/.test(last.content[0].text ?? "");
+  if (isSeeAlso) content[content.length - 1] = { ...last, content: [...(last.content ?? []), { type: "text", text: ", " }, link] };
+  else content.push({ type: "paragraph", content: [{ type: "text", text: "See also: " }, link] });
+  const doc = { ...note.doc, content };
+  return { ...note, doc, body: docText(doc) };
+}
