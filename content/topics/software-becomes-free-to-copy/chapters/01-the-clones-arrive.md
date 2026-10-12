@@ -3,9 +3,10 @@ title: "Early October 2026: The Clones Arrive"
 kind: reported
 date: "2026-10"
 label: "Alpha clones"
-level: 1.1
+lines: { solo: 8, oss: 4, corp: 2.2 }
+capabilities: { photo: 0.7, games: 0.3, video: 0.4, audio: 0.4, design: 0.6, cad: 0.1 }
 share: { code: 40, distribution: 25, trust: 15, data: 12, hardware: 8 }
-metrics: { twins: 7, ps5: 2, rebuild: 8, takedowns: 0 }
+metrics: { twins: 7, rebuild: 8, ps5: 2, takedowns: 0, price: 60, switched: 1 }
 ---
 
 In the same fortnight, two projects showed how cheap copying has become.

@@ -2,25 +2,29 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ChapterState, DashboardDef } from "@/lib/types";
-import { Dashboard, DashboardCompact } from "./Dashboard";
+import { Dashboard, DashboardFloating } from "./Dashboard";
+import SectionNav from "./SectionNav";
 
 /**
- * Two-column scroll story: chapters on the left (server-rendered, passed as children,
- * each marked with data-chapter="<index>"), sticky dashboard on the right that follows
- * whichever chapter crosses the middle of the screen.
+ * The topic page grid (ai-2027's .main-grid): chapter timeline on the left,
+ * the reading column, and a sticky dashboard on the right that follows the
+ * chapter crossing the middle of the screen. Phones get a floating card.
  */
 export default function TopicScroll({
+  header,
   def,
   states,
-  kinds,
+  navItems,
   children,
 }: {
+  header: React.ReactNode;
   def: DashboardDef;
   states: ChapterState[];
-  kinds: string[];
+  navItems: { id: string; label: string }[];
   children: React.ReactNode;
 }) {
   const [active, setActive] = useState(0);
+  const [narrow, setNarrow] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,29 +44,36 @@ export default function TopicScroll({
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };
+    const mq = window.matchMedia("(max-width: 930px)");
+    const onMq = () => setNarrow(mq.matches);
+    onMq();
     update();
+    mq.addEventListener("change", onMq);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     return () => {
       cancelAnimationFrame(frame);
+      mq.removeEventListener("change", onMq);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
   }, []);
 
   return (
-    <div ref={ref}>
-      <div className="sticky top-[env(safe-area-inset-top,0px)] z-10 -mx-4 md:hidden">
-        <DashboardCompact def={def} states={states} active={active} />
+    <div ref={ref} className="topic-grid pb-40">
+      <div style={{ gridArea: "header" }}>{header}</div>
+      <div className="topic-toc pt-[44px]" style={{ gridArea: "toc" }}>
+        <SectionNav items={navItems} />
       </div>
-      <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_340px] lg:gap-14">
-        <div className="min-w-0">{children}</div>
-        <aside className="hidden md:block" aria-label="Dashboard">
-          <div className="sticky top-5" data-testid="dashboard" data-active={active}>
-            <Dashboard def={def} states={states} active={active} kinds={kinds} />
-          </div>
-        </aside>
+      <div className="min-w-0" style={{ gridArea: "content" }}>
+        {children}
       </div>
+      <aside className="topic-graph" style={{ gridArea: "graph" }} aria-label="Dashboard">
+        <div className="sticky top-5" data-testid="dashboard" data-active={active}>
+          <Dashboard def={def} states={states} active={active} />
+        </div>
+      </aside>
+      {narrow && <DashboardFloating def={def} states={states} active={active} />}
     </div>
   );
 }

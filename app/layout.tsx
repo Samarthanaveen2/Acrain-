@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import SiteNav from "@/components/SiteNav";
 import "./globals.css";
 
 const etBook = localFont({
@@ -22,7 +21,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${etBook.variable} h-full`}>
       <body className="min-h-full flex flex-col">
-        <SiteNav />
         <main className="flex-1">{children}</main>
       </body>
     </html>

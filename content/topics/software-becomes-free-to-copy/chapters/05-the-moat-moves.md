@@ -3,9 +3,10 @@ title: "2028: The Moat Moves"
 kind: forecast
 date: "2028-06"
 label: "Code is a commodity"
-level: 2.3
+lines: { solo: 60, oss: 30, corp: 9 }
+capabilities: { photo: 1.8, games: 1.6, video: 1.6, audio: 1.5, design: 1.7, cad: 1.0 }
 share: { code: 14, distribution: 32, trust: 23, data: 19, hardware: 12 }
-metrics: { twins: 420, ps5: 450, rebuild: 1, takedowns: 70 }
+metrics: { twins: 420, rebuild: 1, ps5: 450, takedowns: 70, price: 30, switched: 25 }
 ---
 
 By mid-2028, "we built it" is no longer a reason to buy anything. Investors stop asking how hard a product is to build and start asking who already uses it, and why they'd stay.

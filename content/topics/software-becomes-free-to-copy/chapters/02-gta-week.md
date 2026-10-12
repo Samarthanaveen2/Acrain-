@@ -3,9 +3,10 @@ title: "November 2026: GTA VI Week"
 kind: forecast
 date: "2026-11"
 label: "Launch-week ports"
-level: 1.25
+lines: { solo: 9, oss: 4.6, corp: 2.4 }
+capabilities: { photo: 0.8, games: 0.4, video: 0.5, audio: 0.5, design: 0.7, cad: 0.14 }
 share: { code: 38, distribution: 26, trust: 16, data: 12, hardware: 8 }
-metrics: { twins: 12, ps5: 6, rebuild: 7, takedowns: 1 }
+metrics: { twins: 12, rebuild: 7, ps5: 6, takedowns: 1, price: 60, switched: 1 }
 ---
 
 GTA VI launches on November 19 on PS5 and Xbox Series X|S, with no PC version announced.[^date] Within hours, people are dumping it from modified consoles and pointing AnyPS5 at it.

@@ -2,12 +2,12 @@
 
 /*
  * Design tokens, matched to ai-2027.com / ai-2040.com:
- * Tufte-style ET Book on warm off-white, black ink, grey secondary text,
+ * Tufte's ET Book on warm off-white, #111 ink, grey secondary text,
  * and an accent that changes with the branch (path) you're reading.
  */
 :root {
   --vivid-background: #fffff8;
-  --vivid-foreground: #000;
+  --vivid-foreground: #111;
   --dull-background: #f0f0f0;
   --dull-foreground: #666;
   --border: rgb(100, 100, 98);
@@ -42,7 +42,10 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
+/* ai-2027 sets a 15px root and sizes everything in rem from it */
 html {
+  font-size: 15px;
+  scroll-behavior: smooth;
   background: var(--vivid-background);
 }
 
@@ -50,9 +53,7 @@ body {
   background: var(--vivid-background);
   color: var(--vivid-foreground);
   font-family: var(--font-serif);
-  font-size: 1.2rem;
-  line-height: 1.6;
-  font-feature-settings: "onum" 0, "lnum" 1;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -77,32 +78,76 @@ a {
   outline-offset: 2px;
 }
 
-/* The rounded 1.5px grey box ai-2027 uses for charts, cards and the dashboard */
+/* The rounded 1.5px grey box ai-2027 uses for expandables and charts */
 .graph-border-box {
   border: 1.5px solid var(--border);
   border-radius: 0.5rem;
 }
 
-/* Chapter prose: Tufte-ish reading column */
-.prose-acrain {
-  max-width: 40rem;
+/* ---------- Page grid, copied from ai-2027's .main-grid ---------- */
+.topic-grid {
+  display: grid;
+  margin-inline: auto;
+  grid-template-areas:
+    "gap1 tocGap header header  header gap2"
+    "gap1 toc    content graphgap graph gap2";
+  grid-template-columns: 4px minmax(60px, 1fr) minmax(300px, 700px) minmax(32px, 1fr) minmax(min-content, 430px) 0.3fr;
+  padding-top: 8px;
 }
+@media (min-width: 1536px) {
+  .topic-grid {
+    grid-template-columns: 8px minmax(220px, 1fr) minmax(300px, 700px) minmax(32px, 96px) minmax(min-content, 430px) minmax(8px, 1fr);
+  }
+}
+@media (max-width: 1280px) {
+  .topic-grid {
+    grid-template-columns: 32px 0 minmax(300px, 700px) minmax(64px, 1fr) minmax(min-content, 430px) 8px;
+  }
+  .topic-toc {
+    display: none;
+  }
+}
+@media (max-width: 930px) {
+  .topic-grid {
+    grid-template-areas:
+      "gap1 header gap2"
+      "gap1 content gap2";
+    grid-template-columns: 12px minmax(0, 900px) 12px;
+  }
+  .topic-graph {
+    display: none;
+  }
+}
+
+/* ---------- Reading column ---------- */
 .prose-acrain > * + * {
-  margin-top: 1rem;
+  margin-top: 1.4rem;
 }
 .prose-acrain p,
-.prose-acrain li {
-  font-size: 1.2rem;
-  line-height: 1.65;
+.prose-acrain ul,
+.prose-acrain ol,
+.prose-acrain dl,
+.prose-acrain summary {
+  font-size: 1.4rem;
+  line-height: 2rem;
+}
+@media (max-width: 730px) {
+  .prose-acrain p,
+  .prose-acrain ul,
+  .prose-acrain ol,
+  .prose-acrain dl,
+  .prose-acrain summary {
+    font-size: 1.25rem;
+    line-height: 1.45;
+  }
 }
 .prose-acrain a {
-  color: var(--accent);
   text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
 .prose-acrain a:hover {
-  text-decoration-color: var(--accent);
+  color: var(--accent);
 }
 .prose-acrain em {
   font-style: italic;
@@ -112,104 +157,88 @@ a {
 }
 .prose-acrain code {
   font-family: var(--font-mono);
-  font-size: 0.85em;
+  font-size: 0.8em;
   background: var(--dull-background);
   padding: 0.05em 0.3em;
   border-radius: 3px;
 }
 .prose-acrain ul {
   list-style: disc;
-  padding-left: 1.4rem;
+  padding-left: 1.6rem;
 }
 .prose-acrain ol {
   list-style: decimal;
-  padding-left: 1.4rem;
+  padding-left: 1.6rem;
 }
 .prose-acrain li + li {
-  margin-top: 0.3rem;
+  margin-top: 0.35rem;
 }
 
-/* :::expand blocks — ai-2027's collapsible deep-dives */
+/* Footnote numbers: small accent superscripts, like ai-2027 */
+.prose-acrain sup.fn-ref {
+  font-size: 0.75rem;
+  line-height: 0;
+  color: var(--accent);
+  margin-left: 1px;
+}
+.prose-acrain sup.fn-ref a {
+  text-decoration: none;
+  color: var(--accent);
+}
+
+/* :::expand blocks — ai-2027's native <details> with the ▶ marker */
 .prose-acrain details.expand {
+  margin: 0.5rem 0.75rem 0.5rem 0;
   border: 1.5px solid var(--border);
   border-radius: 0.5rem;
-  padding: 0.55rem 1rem;
-  background: var(--vivid-background);
+  padding: 0.25rem 0.5rem;
 }
 .prose-acrain details.expand > summary {
   cursor: pointer;
-  list-style: none;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 1.15rem;
+  display: list-item;
 }
-.prose-acrain details.expand > summary::-webkit-details-marker {
-  display: none;
-}
-.prose-acrain details.expand > summary::before {
-  content: "+";
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.15rem;
-  height: 1.15rem;
-  flex-shrink: 0;
-  border-radius: 3px;
-  background: var(--accent);
-  color: var(--vivid-background);
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  line-height: 1;
-}
-.prose-acrain details.expand[open] > summary::before {
-  content: "−";
+.prose-acrain details.expand > summary::marker {
+  font-size: 0.85em;
 }
 .prose-acrain details.expand[open] > summary {
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.8rem;
 }
-.prose-acrain details.expand > :not(summary) + * {
-  margin-top: 0.8rem;
+.prose-acrain details.expand > :not(summary) + :not(summary) {
+  margin-top: 1rem;
 }
-.prose-acrain details.expand p,
-.prose-acrain details.expand li {
-  font-size: 1.08rem;
+.prose-acrain details.expand[open] > :not(summary) {
+  animation: details-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes details-in {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-/* GFM footnotes: accent superscripts, small grey notes list per chapter */
-.prose-acrain sup a {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  text-decoration: none;
-  padding: 0 0.1em;
+/* New squares in the dashboard waffle fade in */
+.waffle-square {
+  animation: waffle-in 0.4s ease-out both;
 }
-.prose-acrain section.footnotes {
-  margin-top: 1.4rem;
-  border-top: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
-  padding-top: 0.6rem;
+@keyframes waffle-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
-.prose-acrain section.footnotes h2 {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: var(--dull-foreground);
-}
-.prose-acrain section.footnotes li,
-.prose-acrain section.footnotes p {
-  font-size: 0.95rem;
-  line-height: 1.45;
-  color: var(--dull-foreground);
-}
-.prose-acrain section.footnotes ol {
-  margin-top: 0.3rem;
-}
-.prose-acrain .data-footnote-backref,
-.prose-acrain a[data-footnote-backref] {
-  text-decoration: none;
-  margin-left: 0.25rem;
-}
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   *,
   *::before,
   *::after {

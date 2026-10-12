@@ -3,9 +3,10 @@ title: "Early 2027: The Legal Answer"
 kind: forecast
 date: "2027-03"
 label: "Clones under fire"
-level: 1.5
+lines: { solo: 14, oss: 7, corp: 3 }
+capabilities: { photo: 1.1, games: 0.7, video: 0.8, audio: 0.7, design: 1.0, cad: 0.24 }
 share: { code: 33, distribution: 27, trust: 18, data: 13, hardware: 9 }
-metrics: { twins: 35, ps5: 25, rebuild: 5, takedowns: 9 }
+metrics: { twins: 35, rebuild: 5, ps5: 25, takedowns: 9, price: 55, switched: 3 }
 ---
 
 The companies respond the way Nintendo did with Yuzu in 2024: lawyers first. I expect takedown notices against at least one ArtCraft app over its look and name, and pressure on AnyPS5's hosting.

@@ -3,9 +3,10 @@ title: "2030: Copying Is Free, Judgment Isn't"
 kind: forecast
 date: "2030-01"
 label: "Copying is free"
-level: 2.7
+lines: { solo: 200, oss: 100, corp: 25 }
+capabilities: { photo: 1.94, games: 1.84, video: 1.84, audio: 1.8, design: 1.9, cad: 1.5 }
 share: { code: 8, distribution: 30, trust: 24, data: 22, hardware: 16 }
-metrics: { twins: 1200, ps5: 1500, rebuild: 0.3, takedowns: 140 }
+metrics: { twins: 1200, rebuild: 0.3, ps5: 1500, takedowns: 140, price: 20, switched: 40 }
 ---
 
 By 2030, cloning an app is a weekend project. The fights that started with ArtCraft and AnyPS5 have settled into an uneasy normal: companies sue the loudest clones, ignore the rest, and compete on everything except the code.

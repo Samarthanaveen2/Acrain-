@@ -2,6 +2,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkDirective from "remark-directive";
 import remarkExpand from "@/lib/remark-expand";
+import { remarkGlobalNotes } from "@/lib/footnotes";
 import { parseChartSpec } from "@/lib/chart-spec";
 import ChartBlock, { ChartError } from "./ChartBlock";
 
@@ -16,13 +17,11 @@ function chartSource(node?: HastNode): string | null {
   return (code.children ?? []).map((c) => c.value ?? "").join("");
 }
 
-export default function ChapterBody({ id, body }: { id: string; body: string }) {
+export default function ChapterBody({ body, notes = {} }: { body: string; notes?: Record<string, number> }) {
   return (
     <div className="prose-acrain">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkDirective, remarkExpand]}
-        // Footnote ids must be unique across chapters on the same page
-        remarkRehypeOptions={{ clobberPrefix: `${id}-`, footnoteLabel: "Notes" }}
+        remarkPlugins={[remarkGfm, remarkDirective, remarkExpand, [remarkGlobalNotes, { numbers: notes }]]}
         components={{
           a: ({ href, children, node, ...rest }) => {
             const external = href?.startsWith("http");

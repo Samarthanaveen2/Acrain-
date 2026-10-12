@@ -1,6 +1,6 @@
 {
   "title": "Software Becomes Free to Copy",
-  "subtitle": "In one month, a solo developer cloned seven Adobe apps and a hobby project started turning PS5 games into PC programs. This is my guess at what happens next, and where the value goes when copying costs nothing.",
+  "subtitle": "In one month, a solo developer cloned seven Adobe apps with AI, and a hobby project started turning PS5 games into ordinary PC programs. I think copying software is about to become nearly free.\n\nThis is my best guess at how the next four years go, and where the value moves when the code itself stops being worth much.",
   "span": "2026 → 2030",
   "summary": "AnyPS5 and the ArtCraft Adobe clones show copying getting cheap. Where does value move next, and where do I stand?",
   "author": "Samartha",
@@ -25,25 +25,280 @@
     }
   ],
   "dashboard": {
-    "levelLabel": "How easy is it to copy software?",
-    "bands": ["Currently exists", "Emerging", "Science fiction"],
-    "share": {
-      "label": "Where the value in software lives",
-      "parts": [
-        { "key": "code", "label": "The code" },
-        { "key": "distribution", "label": "Distribution" },
-        { "key": "trust", "label": "Trust & brand" },
-        { "key": "data", "label": "Data" },
-        { "key": "hardware", "label": "Hardware" }
+    "lines": {
+      "label": "How fast software can be rebuilt, compared with 2024",
+      "log": true,
+      "series": [
+        {
+          "key": "solo",
+          "label": "Solo devs with AI",
+          "icon": "user"
+        },
+        {
+          "key": "oss",
+          "label": "Open-source projects",
+          "icon": "users"
+        },
+        {
+          "key": "corp",
+          "label": "Big software companies",
+          "icon": "building"
+        }
+      ],
+      "history": [
+        {
+          "date": "2024-01",
+          "label": "Autocomplete",
+          "values": {
+            "solo": 1,
+            "oss": 1,
+            "corp": 1
+          }
+        },
+        {
+          "date": "2024-09",
+          "values": {
+            "solo": 1.3,
+            "oss": 1.15,
+            "corp": 1.1
+          }
+        },
+        {
+          "date": "2025-06",
+          "label": "Coding agents",
+          "values": {
+            "solo": 2,
+            "oss": 1.6,
+            "corp": 1.35
+          }
+        },
+        {
+          "date": "2026-03",
+          "values": {
+            "solo": 3.6,
+            "oss": 2.5,
+            "corp": 1.7
+          }
+        }
       ]
     },
+    "capabilities": {
+      "label": "Clone quality",
+      "items": [
+        {
+          "key": "photo",
+          "label": "Photo",
+          "icon": "image"
+        },
+        {
+          "key": "games",
+          "label": "Games",
+          "icon": "gamepad"
+        },
+        {
+          "key": "video",
+          "label": "Video",
+          "icon": "film"
+        },
+        {
+          "key": "audio",
+          "label": "Audio",
+          "icon": "music"
+        },
+        {
+          "key": "design",
+          "label": "Design",
+          "icon": "pen"
+        },
+        {
+          "key": "cad",
+          "label": "3D & CAD",
+          "icon": "box"
+        }
+      ]
+    },
+    "share": {
+      "label": "Value",
+      "parts": [
+        {
+          "key": "code",
+          "label": "The code",
+          "icon": "code"
+        },
+        {
+          "key": "distribution",
+          "label": "Distribution",
+          "icon": "megaphone"
+        },
+        {
+          "key": "trust",
+          "label": "Trust & brand",
+          "icon": "shield"
+        },
+        {
+          "key": "data",
+          "label": "Data",
+          "icon": "database"
+        },
+        {
+          "key": "hardware",
+          "label": "Hardware",
+          "icon": "cpu"
+        }
+      ]
+    },
+    "waffle": {
+      "text": "{twins} paid apps have a free AI-built twin, cloned in {rebuild}",
+      "metric": "twins",
+      "per": 5
+    },
     "metrics": [
-      { "key": "twins", "label": "Paid apps with a free AI-built twin", "short": "Free twins", "format": "number" },
-      { "key": "ps5", "label": "PS5 games running natively on PC", "short": "PS5 games on PC", "format": "number" },
-      { "key": "rebuild", "label": "Weeks for one dev to clone a pro app", "format": "number", "suffix": " wk" },
-      { "key": "takedowns", "label": "Legal takedowns of clone projects", "format": "number" }
+      {
+        "key": "twins",
+        "label": "Free twins"
+      },
+      {
+        "key": "rebuild",
+        "label": "Clone time",
+        "suffix": " wk"
+      },
+      {
+        "key": "ps5",
+        "label": "PS5 games"
+      },
+      {
+        "key": "takedowns",
+        "label": "Takedowns"
+      },
+      {
+        "key": "price",
+        "label": "Pro suite",
+        "format": "currency",
+        "suffix": "/mo"
+      },
+      {
+        "key": "switched",
+        "label": "Switched",
+        "format": "percent"
+      }
     ],
-    "note": "First chapter reflects reporting as of Oct 12, 2026. Everything after is my estimate."
+    "statGroups": [
+      {
+        "icon": "copy",
+        "label": "Copying",
+        "metrics": [
+          "ps5",
+          "takedowns",
+          "rebuild"
+        ]
+      },
+      {
+        "icon": "landmark",
+        "label": "Market",
+        "metrics": [
+          "price",
+          "switched",
+          "twins"
+        ]
+      }
+    ],
+    "tech": {
+      "buckets": [
+        "Currently Exists",
+        "Emerging Tech",
+        "Science Fiction"
+      ],
+      "items": [
+        {
+          "key": "emulators",
+          "label": "Console emulators",
+          "icon": "gamepad",
+          "exists": "2010-01"
+        },
+        {
+          "key": "gimp",
+          "label": "Free photo editors",
+          "exists": "2010-01"
+        },
+        {
+          "key": "office",
+          "label": "Open-source office suites",
+          "exists": "2010-01"
+        },
+        {
+          "key": "copilot",
+          "label": "AI autocomplete",
+          "exists": "2023-01"
+        },
+        {
+          "key": "agents",
+          "label": "AI coding agents",
+          "icon": "bot",
+          "emerging": "2024-10",
+          "exists": "2025-09"
+        },
+        {
+          "key": "photoclone",
+          "label": "AI-built Photoshop clone",
+          "icon": "image",
+          "emerging": "2026-10",
+          "exists": "2027-09"
+        },
+        {
+          "key": "ps5pc",
+          "label": "PS5 games as native PC programs",
+          "emerging": "2026-10",
+          "exists": "2027-06"
+        },
+        {
+          "key": "videoclone",
+          "label": "AI-built Premiere clone",
+          "emerging": "2026-10",
+          "exists": "2028-03"
+        },
+        {
+          "key": "ruling",
+          "label": "Court ruling on AI clean-room clones",
+          "icon": "gavel",
+          "emerging": "2027-02",
+          "exists": "2028-06"
+        },
+        {
+          "key": "cadclone",
+          "label": "AI-built CAD clone",
+          "emerging": "2027-06",
+          "exists": "2029-03"
+        },
+        {
+          "key": "saasday",
+          "label": "Clone any SaaS in a day",
+          "icon": "zap",
+          "emerging": "2028-01",
+          "exists": "2029-09"
+        },
+        {
+          "key": "fleets",
+          "label": "Self-updating clone fleets",
+          "emerging": "2029-01"
+        },
+        {
+          "key": "os",
+          "label": "Agent rebuilds a whole OS",
+          "icon": "cpu",
+          "emerging": "2029-10"
+        },
+        {
+          "key": "engine",
+          "label": "Open AAA game engine parity"
+        },
+        {
+          "key": "drm",
+          "label": "Uncopyable software",
+          "icon": "lock"
+        }
+      ]
+    },
+    "note": "Chapter 1 counts come from reporting. Every other number is my estimate."
   },
   "sources": [
     {
