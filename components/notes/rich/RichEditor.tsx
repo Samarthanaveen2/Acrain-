@@ -186,7 +186,7 @@ export default function RichEditor({
 
   return (
     <div className="min-w-0 rounded-lg border-[1.5px] border-[#c9c9bf]">
-      <div className="sticky top-[52px] z-10 rounded-t-lg border-b border-[#ddd] bg-[#fffff8]">
+      <div className="sticky top-[calc(var(--safe-top)+52px)] z-10 rounded-t-lg border-b border-[#ddd] bg-[#fffff8]">
         <Toolbar editor={editor} panel={panel} setPanel={setPanel} />
         {panel === "note" && <NotePicker editor={editor} titles={titles} close={() => setPanel(null)} />}
         {panel === "link" && <LinkPanel editor={editor} close={() => setPanel(null)} />}

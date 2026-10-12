@@ -3,7 +3,7 @@
   "appName": "Acrain",
   "webDir": "phone/app-www",
   "ios": {
-    "contentInset": "always",
+    "contentInset": "never",
     "backgroundColor": "#fffff8",
     "scrollEnabled": true
   }

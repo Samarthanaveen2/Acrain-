@@ -52,6 +52,8 @@ const db = {
   }),
 };
 
+document.documentElement.classList.add("app");
+
 (window as unknown as { claude: unknown }).claude = { use: async (name: string) => (name === "db" ? db : null) };
 
 // Start the app only after the storage above is in place

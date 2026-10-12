@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { PenLine } from "lucide-react";
+import { ChevronLeft, PenLine } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
 import { backlinks, findNote, fmtDate, footnotesIn, markdownToHtml, noteLinks, type Note } from "@/lib/notes";
 import RichView from "./rich/RichView";
 
 /** Reading a note: ai-2027 typography, then what it connects to and what connects to it */
-export default function NoteView({ note, notes }: { note: Note; notes: Note[] }) {
+export default function NoteView({ note, notes, onBack }: { note: Note; notes: Note[]; onBack?: () => void }) {
   const linkedFrom = backlinks(notes, note);
   const linksTo = noteLinks(note).map((t) => ({ title: t, note: findNote(notes, t) }));
   const footnotes = note.doc ? footnotesIn(note.doc) : [];
@@ -16,6 +16,11 @@ export default function NoteView({ note, notes }: { note: Note; notes: Note[] })
 
   return (
     <div className="mx-auto max-w-[1166px] px-4 pb-32 min-[731px]:px-8">
+      {onBack && (
+        <button type="button" onClick={onBack} className="-ml-1 flex items-center gap-0.5 pt-2 text-[1.25rem]">
+          <ChevronLeft size={22} /> Back
+        </button>
+      )}
       <SiteHeader title={note.title || "Untitled"} />
       <div className="max-w-[700px]">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[13px] text-[#777]">

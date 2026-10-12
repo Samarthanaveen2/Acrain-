@@ -27,18 +27,23 @@ jobs:
 
       - name: Build the app's web files
         run: node phone/build.mjs --app
+        env:
+          APP_VERSION: 1.0.${{ github.run_number }}
 
       - name: Create the iOS project
         run: |
           npx cap add ios --packagemanager SPM
           npx cap sync ios
           cp phone/app-assets/AppIcon-512@2x.png ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+          # Always light (dark status-bar text on the cream background)
+          /usr/libexec/PlistBuddy -c "Add :UIUserInterfaceStyle string Light" ios/App/App/Info.plist
 
       - name: Build (unsigned)
         run: |
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
             -sdk iphoneos -destination 'generic/platform=iOS' \
             -archivePath build/App.xcarchive archive \
+            MARKETING_VERSION=1.0.${{ github.run_number }} CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tail -40
 
       - name: Package .ipa
@@ -52,7 +57,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: app-${{ github.run_number }}
-          name: Acrain app ${{ github.run_number }}
+          name: Acrain 1.0.${{ github.run_number }}
           target_commitish: ${{ github.sha }}
           body: |
             Download **Acrain.ipa** below on your iPhone, then open it with SideStore (or in SideStore: + → pick the file).

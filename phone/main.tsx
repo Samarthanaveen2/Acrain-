@@ -10,7 +10,9 @@ import NotesTimeline from "@/components/notes/NotesTimeline";
 import { findNote, freeId, type Note } from "@/lib/notes";
 import { NotesContext } from "@/components/notes/rich/context";
 import { createNote, deleteNote, saveNote, subscribeNotes } from "./notes-store";
-import { navigate, usePath } from "./router";
+import { back, navigate, usePath } from "./router";
+import TabBar from "./TabBar";
+import Settings from "./Settings";
 
 type Status = "loading" | "offline" | "ready";
 const wrap = "mx-auto max-w-[1166px] px-4 pb-24 min-[731px]:px-8";
@@ -42,12 +44,12 @@ function NewNote({ notes, initialTitle }: { notes: Note[]; initialTitle: string 
     if (started.current || !t.trim()) return;
     started.current = true;
     const existing = findNote(notes, t);
-    if (existing) return navigate(`/notes/${existing.id}`);
+    if (existing) return navigate(`/notes/${existing.id}`, { replace: true });
     const now = new Date().toISOString();
     const note: Note = { id: freeId(notes, t), title: t.trim(), body: "", tags: [], created: now, updated: now };
     try {
       await createNote(note);
-      navigate(`/notes/${note.id}/edit`);
+      navigate(`/notes/${note.id}/edit`, { replace: true });
     } catch (e) {
       started.current = false;
       setError(`Couldn't create the note (${(e as { message?: string })?.message ?? String(e)}).`);
@@ -90,11 +92,12 @@ function NewNote({ notes, initialTitle }: { notes: Note[]; initialTitle: string 
   );
 }
 
-function App() {
-  const path = usePath();
-  const { status, notes } = useNotes();
+function Screen({ path, status, notes }: { path: string; status: Status; notes: Note[] }) {
   const [route, query = ""] = path.split("?");
   const m = route.match(/^\/notes\/([^/]+)(\/edit)?$/);
+  const restore = async (list: Note[]) => {
+    for (const n of list) await createNote(n);
+  };
 
   if (route === "/new-note") {
     const title = new URLSearchParams(query).get("title") ?? "";
@@ -103,6 +106,7 @@ function App() {
   }
   if (route === "/map") return <NotesMap notes={notes} />;
   if (route === "/timeline") return <NotesTimeline notes={notes} />;
+  if (route === "/settings") return <Settings notes={notes} onRestore={restore} />;
   if (route === "/about")
     return (
       <ComingSoon title="About">
@@ -120,33 +124,40 @@ function App() {
     return (
       <NotesContext.Provider value={{ notes, openNote }}>
         {m[2] ? (
-      <NoteEditor
-        key={note.id}
-        initial={note}
-        notes={notes}
-        onSave={(n, prev) => saveNote(n, prev, notes)}
-        onDelete={async (n) => {
-          await deleteNote(n.id);
-          navigate("/");
-        }}
-      />
-    ) : (
-      <NoteView key={note.id} note={note} notes={notes} />
+          <NoteEditor
+            key={note.id}
+            initial={note}
+            notes={notes}
+            onSave={(n, prev) => saveNote(n, prev, notes)}
+            onBack={back}
+            onDone={() => navigate(`/notes/${note.id}`, { replace: true })}
+            onDelete={async (n) => {
+              await deleteNote(n.id);
+              navigate("/", { root: true });
+            }}
+          />
+        ) : (
+          <NoteView key={note.id} note={note} notes={notes} onBack={back} />
         )}
       </NotesContext.Provider>
     );
   }
   const tag = new URLSearchParams(query).get("tag");
+  return <NotesHome key={tag ?? ""} notes={notes} status={status} initialTag={tag} />;
+}
+
+function App() {
+  const path = usePath();
+  const { status, notes } = useNotes();
+  // The editor gets the whole screen (and the keyboard); everywhere else shows the tabs
+  const editing = /\/edit$/.test(path.split("?")[0]);
   return (
-    <NotesHome
-      key={tag ?? ""}
-      notes={notes}
-      status={status}
-      initialTag={tag}
-      onRestore={async (list) => {
-        for (const n of list) await createNote(n);
-      }}
-    />
+    <>
+      <div className={editing ? "" : "pb-tabbar"}>
+        <Screen path={path} status={status} notes={notes} />
+      </div>
+      {!editing && <TabBar path={path} />}
+    </>
   );
 }
 

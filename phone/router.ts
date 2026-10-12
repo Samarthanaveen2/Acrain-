@@ -1,13 +1,12 @@
 import { useSyncExternalStore } from "react";
 
-// In-memory routing for the phone page (artifact pages can't use URL paths)
-let path = "/";
+// In-memory routing with a back stack (the app has no browser URL bar)
+let stack: string[] = ["/"];
 const listeners = new Set<() => void>();
 
-export function navigate(to: string) {
-  const [p, hash] = to.split("#");
-  path = p || "/";
+function show(to: string) {
   listeners.forEach((l) => l());
+  const hash = to.split("#")[1];
   requestAnimationFrame(() => {
     const el = hash ? document.getElementById(hash) : null;
     if (el) el.scrollIntoView();
@@ -15,10 +14,26 @@ export function navigate(to: string) {
   });
 }
 
+/** Go to a screen. Tabs reset the history; `replace` swaps the current screen (e.g. after creating a note). */
+export function navigate(to: string, opts: { replace?: boolean; root?: boolean } = {}) {
+  const path = to.split("#")[0] || "/";
+  if (opts.root) stack = [path];
+  else if (opts.replace) stack = [...stack.slice(0, -1), path];
+  else if (stack[stack.length - 1] !== path) stack = [...stack, path];
+  show(to);
+}
+
+export function back() {
+  stack = stack.length > 1 ? stack.slice(0, -1) : ["/"];
+  show(stack[stack.length - 1]);
+}
+
+export const canGoBack = () => stack.length > 1;
+
 export function usePath() {
   return useSyncExternalStore(
     (l) => (listeners.add(l), () => listeners.delete(l)),
-    () => path,
-    () => path,
+    () => stack[stack.length - 1],
+    () => stack[stack.length - 1],
   );
 }

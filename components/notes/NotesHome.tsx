@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
-import Backup from "./Backup";
 import { backlinks, fmtDate, noteLinks, type Note } from "@/lib/notes";
 
 /** First readable line of a note, for the list */
@@ -26,12 +25,10 @@ export default function NotesHome({
   notes,
   status,
   initialTag = null,
-  onRestore,
 }: {
   notes: Note[];
   status: "loading" | "offline" | "ready";
   initialTag?: string | null;
-  onRestore?: (notes: Note[]) => Promise<void>;
 }) {
   const [q, setQ] = useState("");
   const [tag, setTag] = useState<string | null>(initialTag);
@@ -144,7 +141,6 @@ export default function NotesHome({
                 {shown.length === 0 && <p className="mt-4 text-[1.2rem] text-[#777]">Nothing matches.</p>}
               </ol>
             )}
-            {onRestore && <Backup notes={notes} onRestore={onRestore} />}
           </>
         )}
       </section>

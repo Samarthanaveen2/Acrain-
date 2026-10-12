@@ -20,6 +20,9 @@
   --path-s: #111; /* near-black */
 
   --accent: var(--path-a);
+  /* Phone notch / home-bar insets; only the app turns these on */
+  --safe-top: 0px;
+  --safe-bottom: 0px;
   color-scheme: light;
 }
 
@@ -465,4 +468,37 @@ h3 {
 .ProseMirror-selectednode.chart-node {
   outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
   border-radius: 0.5rem;
+}
+
+/* ---------- Native app (html.app, set by phone/app-entry.ts) ---------- */
+.app {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  -webkit-tap-highlight-color: transparent;
+}
+.app body {
+  padding-top: var(--safe-top);
+}
+/* A cream strip behind the status bar so scrolled content doesn't show through it */
+.app body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--safe-top);
+  background: var(--vivid-background);
+  z-index: 40;
+}
+.app .site-nav {
+  display: none;
+}
+.app .site-title {
+  font-size: 3.3rem;
+}
+.tab-bar {
+  padding-bottom: var(--safe-bottom);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.pb-tabbar {
+  padding-bottom: calc(4.5rem + var(--safe-bottom));
 }

@@ -26,7 +26,10 @@ const result = await build({
   jsx: "automatic",
   target: "es2020",
   write: false,
-  define: { "process.env.NODE_ENV": '"production"' },
+  define: {
+    "process.env.NODE_ENV": '"production"',
+    __APP_VERSION__: JSON.stringify(process.env.APP_VERSION ?? "dev"),
+  },
   tsconfig: path.join(root, "tsconfig.json"),
   plugins: [
     {
@@ -66,7 +69,7 @@ if (forApp) {
   const www = path.join(root, "phone/app-www");
   fs.mkdirSync(www, { recursive: true });
   const page = `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
 ${html}`;
   fs.writeFileSync(path.join(www, "index.html"), page.replace(/(<\/script>\s*)$/, "$1</body></html>").replace("<title>Acrain</title>", "<title>Acrain</title></head><body>"));

@@ -2,24 +2,33 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Trash2 } from "lucide-react";
+import { ChevronLeft, Trash2 } from "lucide-react";
 import { inputCls } from "@/components/editor/fields";
 import { markdownToHtml, parseTags, type Note } from "@/lib/notes";
 import RichEditor from "./rich/RichEditor";
 
 type Status = { type: "idle" | "saving" | "saved" | "error"; message?: string };
 
-/** Writing a note. `onSave` stores it (and renames links elsewhere if the title changed). */
+/**
+ * Writing a note. Saves by itself shortly after you stop typing and when you leave;
+ * `onSave` stores it (and renames links elsewhere if the title changed).
+ */
 export default function NoteEditor({
   initial,
   notes,
   onSave,
   onDelete,
+  onBack,
+  onDone,
 }: {
   initial: Note;
   notes: Note[];
   onSave: (note: Note, previousTitle: string) => Promise<void>;
   onDelete: (note: Note) => Promise<void>;
+  /** Back button handler (the app's history); without it, Back goes to the notes list */
+  onBack?: () => void;
+  /** "Done" handler; without it, Done opens the note */
+  onDone?: () => void;
 }) {
   const [note, setNote] = useState(initial);
   const [tagText, setTagText] = useState(initial.tags.join(", "));
@@ -40,7 +49,7 @@ export default function NoteEditor({
 
   const save = useCallback(async () => {
     const { note: n, tagText: t } = latest.current;
-    if (!n.title.trim()) return setStatus({ type: "error", message: "Give the note a title first." });
+    if (!n.title.trim()) return setStatus({ type: "error", message: "Add a title to save" });
     setStatus({ type: "saving" });
     const next = { ...n, title: n.title.trim(), tags: parseTags(t), updated: new Date().toISOString() };
     try {
@@ -53,6 +62,25 @@ export default function NoteEditor({
       setStatus({ type: "error", message: `Couldn't save (${(e as { message?: string })?.message ?? String(e)}).` });
     }
   }, [onSave]);
+
+  // Autosave: shortly after the last change…
+  useEffect(() => {
+    if (!dirty) return;
+    const t = setTimeout(save, 700);
+    return () => clearTimeout(t);
+  }, [note, tagText, dirty, save]);
+
+  // …and when leaving the editor with changes not yet saved
+  const pending = useRef({ dirty, save });
+  useEffect(() => {
+    pending.current = { dirty, save };
+  }, [dirty, save]);
+  useEffect(
+    () => () => {
+      if (pending.current.dirty) pending.current.save();
+    },
+    [],
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -69,25 +97,29 @@ export default function NoteEditor({
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-[#666]/30 bg-background/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[860px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
-          <Link href="/" className="font-mono text-[12px] text-[#666] no-underline">
-            ← Notes
-          </Link>
-          <span role="status" className={`flex-1 font-mono text-[12px] ${status.type === "error" ? "text-[#8b0000]" : "text-[#777]"}`}>
-            {status.type === "saving" ? "Saving…" : status.type === "saved" ? "Saved" : status.type === "error" ? status.message : dirty ? "Unsaved changes" : ""}
+      <header className="sticky top-[var(--safe-top)] z-20 border-b border-[#666]/30 bg-background/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[860px] items-center gap-3 px-2 py-2">
+          {onBack ? (
+            <button type="button" onClick={onBack} className="flex items-center gap-0.5 px-1 py-1 text-[1.25rem]">
+              <ChevronLeft size={22} /> Back
+            </button>
+          ) : (
+            <Link href="/" className="flex items-center gap-0.5 px-1 py-1 text-[1.25rem] no-underline">
+              <ChevronLeft size={22} /> Notes
+            </Link>
+          )}
+          <span role="status" className={`flex-1 truncate text-right font-mono text-[12px] ${status.type === "error" ? "text-[#8b0000]" : "text-[#888]"}`}>
+            {status.type === "saving" ? "Saving…" : status.type === "saved" ? "Saved" : status.type === "error" ? status.message : dirty ? "Editing…" : ""}
           </span>
-          <Link href={`/notes/${note.id}`} className="font-mono text-[12px] text-[#333] underline">
-            View
-          </Link>
-          <button
-            type="button"
-            onClick={save}
-            disabled={status.type === "saving"}
-            className="rounded-md border-[1.5px] border-[#111] bg-[#111] px-3 py-1 text-[1.15rem] text-background disabled:opacity-50"
-          >
-            Save
-          </button>
+          {onDone ? (
+            <button type="button" onClick={onDone} className="rounded-md bg-[#111] px-3 py-1 text-[1.15rem] text-background">
+              Done
+            </button>
+          ) : (
+            <Link href={`/notes/${note.id}`} className="rounded-md bg-[#111] px-3 py-1 text-[1.15rem] text-background no-underline">
+              Done
+            </Link>
+          )}
         </div>
       </header>
 
@@ -96,6 +128,7 @@ export default function NoteEditor({
           aria-label="Note title"
           value={note.title}
           placeholder="Title"
+          autoFocus={!initial.title}
           onChange={(e) => edit({ title: e.target.value })}
           className={`${inputCls} text-[2.2rem] leading-tight`}
         />
