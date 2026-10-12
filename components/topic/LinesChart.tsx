@@ -120,7 +120,8 @@ export default function LinesChart({
   const lead = def.series[0]?.key;
   const charW = 6.1;
   const milestones: { t: number; label: string; x: number; y: number }[] = [];
-  for (const p of [...visible].reverse()) {
+  // Include the milestone sitting exactly at "now" (the chapter being read)
+  for (const p of [...all.filter((q) => q.t <= t1 + 1e-6)].reverse()) {
     if (!p.label || milestones.length >= maxMilestones) continue;
     const mx = x(p.t);
     const w = p.label.length * charW;

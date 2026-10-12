@@ -14,6 +14,17 @@ npm run dev
 
 Then open http://localhost:3000.
 
+## Writing
+
+1. On the home page, click **New topic** and give it a title.
+2. In the editor, write the intro and questions, then **Add chapter** for each step of your story.
+3. For each chapter set the month, a milestone name for the chart, write the text, and set the dashboard numbers
+   (sliders for capabilities; number boxes accept shorthand like `47B`, `1.2T`, `20K`).
+4. The right side shows the live dashboard. Press **Save** or Ctrl/⌘+S.
+
+The writing box has buttons for a **deep-dive box**, a **footnote**, a **chart** and a **link**.
+Saving writes files into `content/topics/`, so it works when Acrain runs on your own computer.
+
 ## Writing a topic
 
 Each topic is a folder in `content/topics/<slug>/`:

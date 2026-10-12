@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { BarChart3, BookOpen } from "lucide-react";
+import Link from "next/link";
+import { BarChart3, BookOpen, PenLine } from "lucide-react";
 import { getTopic, listTopicSlugs } from "@/lib/topics";
 import { collectNotes } from "@/lib/footnotes";
 import SiteHeader from "@/components/SiteHeader";
@@ -12,7 +13,9 @@ import Sources from "@/components/topic/Sources";
 import Trends from "@/components/topic/Trends";
 
 export function generateStaticParams() {
-  return listTopicSlugs().map((slug) => ({ slug }));
+  const slugs = listTopicSlugs();
+  // Cache Components needs at least one param at build time, even with no topics yet
+  return slugs.length ? slugs.map((slug) => ({ slug })) : [{ slug: "__none__" }];
 }
 
 export async function generateMetadata({ params }: PageProps<"/topics/[slug]">): Promise<Metadata> {
@@ -39,6 +42,28 @@ export default async function TopicPage({ params }: PageProps<"/topics/[slug]">)
   }));
   const { notes, numbers } = collectNotes(topic.chapters);
   const sep = <span className="text-[#bbb]">|</span>;
+  const editLink = (
+    <Link href={`/topics/${topic.slug}/edit`} className="inline-flex items-center gap-1 no-underline hover:text-[#111]">
+      <PenLine size={14} /> Edit
+    </Link>
+  );
+
+  if (!topic.chapters.length) {
+    return (
+      <div className="mx-auto max-w-[1166px] px-4 pb-24 min-[731px]:px-8">
+        <SiteHeader title={topic.title} byline={topic.author} />
+        <div className="prose-acrain max-w-[700px]">
+          <p className="text-[#555]">No chapters yet.</p>
+        </div>
+        <Link
+          href={`/topics/${topic.slug}/edit`}
+          className="mt-6 inline-block rounded-md border-[1.5px] border-[#111] bg-[#111] px-3 py-1 text-[1.3rem] text-background no-underline"
+        >
+          Write the first chapter
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <TopicScroll
@@ -47,11 +72,16 @@ export default async function TopicPage({ params }: PageProps<"/topics/[slug]">)
       states={states}
       navItems={topic.chapters.map((c) => ({ id: c.id, label: shortTitle(c.title) }))}
     >
-      <div className="prose-acrain">
-        {topic.subtitle.split(/\n\s*\n/).map((para, i) => (
-          <p key={i}>{para}</p>
-        ))}
-      </div>
+      {topic.subtitle.trim() && (
+        <div className="prose-acrain">
+          {topic.subtitle
+            .trim()
+            .split(/\n\s*\n/)
+            .map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+        </div>
+      )}
       <QuestionChips questions={topic.questions} />
 
       <p className="mt-14 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[13px] text-[#777]">
@@ -59,13 +89,23 @@ export default async function TopicPage({ params }: PageProps<"/topics/[slug]">)
         {sep}
         <span>Updated {topic.updated}</span>
         {sep}
-        <a href="#trends" className="inline-flex items-center gap-1 no-underline hover:text-[#111]">
-          <BarChart3 size={14} /> Trends
-        </a>
-        {sep}
-        <a href="#sources" className="inline-flex items-center gap-1 no-underline hover:text-[#111]">
-          <BookOpen size={14} /> Sources
-        </a>
+        {editLink}
+        {topic.chapters.length > 1 && (
+          <>
+            {sep}
+            <a href="#trends" className="inline-flex items-center gap-1 no-underline hover:text-[#111]">
+              <BarChart3 size={14} /> Trends
+            </a>
+          </>
+        )}
+        {topic.sources.length > 0 && (
+          <>
+            {sep}
+            <a href="#sources" className="inline-flex items-center gap-1 no-underline hover:text-[#111]">
+              <BookOpen size={14} /> Sources
+            </a>
+          </>
+        )}
       </p>
 
       <div className="grid gap-16">
