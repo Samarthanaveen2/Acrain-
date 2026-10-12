@@ -137,7 +137,17 @@ function App() {
     );
   }
   const tag = new URLSearchParams(query).get("tag");
-  return <NotesHome key={tag ?? ""} notes={notes} status={status} initialTag={tag} />;
+  return (
+    <NotesHome
+      key={tag ?? ""}
+      notes={notes}
+      status={status}
+      initialTag={tag}
+      onRestore={async (list) => {
+        for (const n of list) await createNote(n);
+      }}
+    />
+  );
 }
 
 createRoot(document.getElementById("acrain-root")!).render(

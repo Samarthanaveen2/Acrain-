@@ -1,0 +1,61 @@
+# Builds Acrain as an unsigned iPhone app (.ipa) for SideStore and attaches it to a GitHub Release.
+# SideStore signs the app with your own Apple ID when you install it.
+name: iPhone app
+
+on:
+  push:
+    branches: [acrain-web]
+    paths: ["components/**", "lib/**", "phone/**", "app/globals.css", "capacitor.config.json", "package*.json", ".github/workflows/ios-app.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build the app's web files
+        run: node phone/build.mjs --app
+
+      - name: Create the iOS project
+        run: |
+          npx cap add ios --packagemanager SPM
+          npx cap sync ios
+          cp phone/app-assets/AppIcon-512@2x.png ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+
+      - name: Build (unsigned)
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath build/App.xcarchive archive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tail -40
+
+      - name: Package .ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/App.xcarchive/Products/Applications/App.app Payload/
+          zip -qry Acrain.ipa Payload
+          ls -lh Acrain.ipa
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-${{ github.run_number }}
+          name: Acrain app ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          body: |
+            Download **Acrain.ipa** below on your iPhone, then open it with SideStore (or in SideStore: + → pick the file).
+            Built from ${{ github.sha }}.
+          files: Acrain.ipa
+          make_latest: true

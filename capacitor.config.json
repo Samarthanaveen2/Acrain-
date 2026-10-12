@@ -1,0 +1,10 @@
+{
+  "appId": "com.samartha.acrain",
+  "appName": "Acrain",
+  "webDir": "phone/app-www",
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#fffff8",
+    "scrollEnabled": true
+  }
+}
