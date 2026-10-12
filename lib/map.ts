@@ -118,3 +118,51 @@ export function neighboursOf(graph: Graph, id: string | null) {
 }
 
 export const dotRadius = (n: MapNode) => 6 + Math.min(10, Math.sqrt(n.degree) * 3);
+
+// ---- Themes: a colour per tag, from the ai-2027 palette first ----
+const PALETTE = ["#2a623d", "#31566f", "#c77400", "#8b0000", "#6b4c8a", "#3f7f7a", "#8a6d3b", "#a0466b", "#55606e"];
+export const UNTAGGED = "#111";
+
+/** Tags by how often you use them, each with a colour that stays the same as long as the order does */
+export function themes(notes: Note[]) {
+  const count = new Map<string, number>();
+  for (const n of notes) for (const t of n.tags) count.set(t, (count.get(t) ?? 0) + 1);
+  return [...count.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([tag, n], i) => ({ tag, count: n, colour: PALETTE[i % PALETTE.length] }));
+}
+
+export function colourOf(node: MapNode, colours: Map<string, string>) {
+  const tag = node.note?.tags[0];
+  return (tag && colours.get(tag)) || UNTAGGED;
+}
+
+/** Groups of notes joined by links (ghosts left out) */
+export function clusters(graph: Graph) {
+  const written = new Set(graph.nodes.filter((n) => n.note).map((n) => n.id));
+  const parent = new Map([...written].map((id) => [id, id]));
+  const find = (x: string): string => (parent.get(x) === x ? x : find(parent.get(x)!));
+  for (const e of graph.edges) if (written.has(e.a) && written.has(e.b)) parent.set(find(e.a), find(e.b));
+  const groups = new Map<string, string[]>();
+  for (const id of written) groups.set(find(id), [...(groups.get(find(id)) ?? []), id]);
+  return [...groups.values()];
+}
+
+/** Convex hull (monotone chain), for drawing a soft halo around a group of dots */
+export function hull(points: { x: number; y: number }[]) {
+  const p = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+  if (p.length < 3) return p;
+  const cross = (o: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) =>
+    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lower: typeof p = [];
+  for (const q of p) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop();
+    lower.push(q);
+  }
+  const upper: typeof p = [];
+  for (const q of [...p].reverse()) {
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], q) <= 0) upper.pop();
+    upper.push(q);
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)];
+}

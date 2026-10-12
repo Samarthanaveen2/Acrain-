@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from "react";
-import { dotRadius, neighboursOf, type Graph } from "@/lib/map";
+import { colourOf, dotRadius, hull, neighboursOf, type Graph } from "@/lib/map";
 
 type View = { x: number; y: number; k: number };
 export type MapHandle = { fit: (animate?: boolean) => void; centreOn: (id: string) => void };
@@ -21,6 +21,9 @@ export default function MapCanvas({
   onSelect,
   onMove,
   bottomInset = 0,
+  colours,
+  theme = null,
+  halos = [],
   ref,
 }: {
   graph: Graph;
@@ -28,6 +31,12 @@ export default function MapCanvas({
   onSelect: (id: string | null) => void;
   onMove: (id: string, x: number, y: number) => void;
   bottomInset?: number;
+  /** Tag → colour */
+  colours: Map<string, string>;
+  /** A tag to highlight, or null for everything */
+  theme?: string | null;
+  /** Soft areas drawn behind groups of dots */
+  halos?: { key: string; colour: string; ids: string[] }[];
   ref?: Ref<MapHandle>;
 }) {
   const box = useRef<HTMLDivElement>(null);
@@ -257,6 +266,16 @@ export default function MapCanvas({
   };
 
   const near = neighboursOf(graph, selected);
+  // What's in focus: the picked dot and its neighbours, or every note with the picked tag
+  const focus = selected
+    ? new Set([selected, ...near])
+    : theme
+      ? new Set(graph.nodes.filter((n) => n.note?.tags.includes(theme)).map((n) => n.id))
+      : null;
+  const picked = graph.nodes.find((n) => n.id === selected);
+  const litColour = picked
+    ? colourOf(picked, colours) === "#111" ? "var(--accent)" : colourOf(picked, colours)
+    : (theme && colours.get(theme)) || "var(--accent)";
   const k = view?.k ?? 1;
   const xy = (id: string) => pos(id) ?? { x: 0, y: 0 };
 
@@ -274,10 +293,29 @@ export default function MapCanvas({
       >
         {view && (
           <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
+            {halos.map((h) => {
+              const pts = hull(h.ids.map(xy));
+              const pad = 30;
+              return (
+                <g key={h.key} opacity={0.1} className="pointer-events-none">
+                  {pts.length === 1 ? (
+                    <circle cx={pts[0].x} cy={pts[0].y} r={pad} fill={h.colour} />
+                  ) : (
+                    <polygon
+                      points={pts.map((q) => `${q.x},${q.y}`).join(" ")}
+                      fill={h.colour}
+                      stroke={h.colour}
+                      strokeWidth={pad * 2}
+                      strokeLinejoin="round"
+                    />
+                  )}
+                </g>
+              );
+            })}
             {graph.edges.map((e) => {
               const a = xy(e.a);
               const b = xy(e.b);
-              const lit = selected && (e.a === selected || e.b === selected);
+              const lit = selected ? e.a === selected || e.b === selected : !!focus && focus.has(e.a) && focus.has(e.b);
               const ghost = e.a.startsWith("missing:") || e.b.startsWith("missing:");
               return (
                 <line
@@ -286,19 +324,20 @@ export default function MapCanvas({
                   y1={a.y}
                   x2={b.x}
                   y2={b.y}
-                  stroke={lit ? "var(--accent)" : "#b9b9ae"}
+                  stroke={lit ? litColour : "#b9b9ae"}
                   strokeWidth={(lit ? 2.4 : 1.3) / Math.sqrt(k)}
                   strokeDasharray={ghost ? "4 3" : undefined}
-                  opacity={selected && !lit ? 0.25 : 1}
+                  opacity={focus && !lit ? 0.25 : 1}
                 />
               );
             })}
             {graph.nodes.map((n) => {
               const p = xy(n.id);
               const on = n.id === selected;
-              const lit = on || near.has(n.id);
-              const dim = selected && !lit;
+              const lit = !!focus && focus.has(n.id);
+              const dim = focus && !lit;
               const r = dotRadius(n);
+              const colour = colourOf(n, colours);
               const showLabel = lit || k >= 0.7 || (k >= 0.45 && n.degree >= 3);
               const label = n.title.length > 26 ? `${n.title.slice(0, 25)}…` : n.title;
               return (
@@ -306,15 +345,15 @@ export default function MapCanvas({
                   key={n.id}
                   data-node={n.id}
                   transform={`translate(${p.x},${p.y})`}
-                  opacity={dim ? 0.22 : 1}
+                  opacity={dim ? 0.2 : 1}
                   className="cursor-pointer"
                   style={{ transition: "opacity 200ms" }}
                 >
                   <circle r={Math.max(r + 8, 20 / k)} fill="transparent" />
-                  {on && <circle r={r + 6} fill="none" stroke="var(--accent)" strokeWidth={2} opacity={0.35} />}
+                  {on && <circle r={r + 6} fill="none" stroke={colour === "#111" ? "var(--accent)" : colour} strokeWidth={2.5} opacity={0.45} />}
                   <circle
                     r={r}
-                    fill={n.note ? (on ? "var(--accent)" : lit && selected ? "#2b2b2b" : "#111") : "#fffff8"}
+                    fill={n.note ? colour : "#fffff8"}
                     stroke={n.note ? "none" : on ? "var(--accent)" : "#8a8a80"}
                     strokeDasharray={n.note ? undefined : "3 2"}
                     strokeWidth={1.5}

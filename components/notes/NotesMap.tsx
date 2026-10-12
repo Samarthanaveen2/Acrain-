@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Maximize } from "lucide-react";
-import { buildGraph, layout, neighboursOf, type Positions } from "@/lib/map";
+import { buildGraph, clusters, colourOf, layout, neighboursOf, themes, UNTAGGED, type Positions } from "@/lib/map";
 import type { Note } from "@/lib/notes";
 import MapCanvas, { type MapHandle } from "./map/MapCanvas";
 import PeekCard from "./map/PeekCard";
@@ -22,6 +22,29 @@ export default function NotesMap({
   const canvas = useRef<MapHandle>(null);
   const card = useRef<HTMLDivElement>(null);
   const [cardH, setCardH] = useState(0);
+
+  const [theme, setTheme] = useState<string | null>(null);
+  const tagList = useMemo(() => themes(notes), [notes]);
+  const colours = useMemo(() => new Map(tagList.map((t) => [t.tag, t.colour])), [tagList]);
+
+  // Soft areas behind the dots: the picked theme, or else each separate group of linked notes
+  const halos = useMemo(() => {
+    if (theme) {
+      const ids = graph.nodes.filter((n) => n.note?.tags.includes(theme)).map((n) => n.id);
+      return ids.length ? [{ key: `t:${theme}`, colour: colours.get(theme) ?? UNTAGGED, ids }] : [];
+    }
+    const groups = clusters(graph).filter((g) => g.length >= 3);
+    if (groups.length < 2) return [];
+    return groups.map((ids) => {
+      const tally = new Map<string, number>();
+      for (const id of ids) {
+        const c = colourOf(graph.nodes.find((n) => n.id === id)!, colours);
+        tally.set(c, (tally.get(c) ?? 0) + 1);
+      }
+      const colour = [...tally.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      return { key: ids[0], colour, ids };
+    });
+  }, [graph, theme, colours]);
 
   const node = graph.nodes.find((n) => n.id === selected);
   const near = neighboursOf(graph, selected);
@@ -67,6 +90,32 @@ export default function NotesMap({
         )}
       </header>
 
+      {tagList.length > 0 && (
+        <div className="-mx-4 mb-2 flex gap-1.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] min-[731px]:mx-0 min-[731px]:px-0" role="group" aria-label="Themes">
+          {[{ tag: null, count: notes.length, colour: UNTAGGED }, ...tagList].map((t) => {
+            const on = theme === t.tag;
+            return (
+              <button
+                key={t.tag ?? "all"}
+                type="button"
+                aria-pressed={on}
+                onClick={() => {
+                  setSelected(null);
+                  setTheme(t.tag);
+                }}
+                className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[1.1rem] whitespace-nowrap ${
+                  on ? "border-[#111] bg-[#111] text-[#fffff8]" : "border-[#111]/30"
+                }`}
+              >
+                {t.tag && <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: t.colour }} />}
+                {t.tag ? `#${t.tag}` : "All"}
+                <span className={`font-mono text-[10px] ${on ? "text-[#fffff8]/70" : "text-[#888]"}`}>{t.count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {notes.length === 0 ? (
         <p className="mt-6 font-mono text-[13px] text-[#777]">Write a few notes and link them to see the map.</p>
       ) : (
@@ -79,6 +128,9 @@ export default function NotesMap({
               onSelect={setSelected}
               onMove={move}
               bottomInset={cardH}
+              colours={colours}
+              theme={theme}
+              halos={halos}
             />
           )}
           {node && (
