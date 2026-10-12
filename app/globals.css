@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens, matched to ai-2027.com / ai-2040.com:
+ * Tufte-style ET Book on warm off-white, black ink, grey secondary text,
+ * and an accent that changes with the branch (path) you're reading.
+ */
+:root {
+  --vivid-background: #fffff8;
+  --vivid-foreground: #000;
+  --dull-background: #f0f0f0;
+  --dull-foreground: #666;
+  --border: rgb(100, 100, 98);
+
+  /* Branch colors (ai-2040's Plan palette) */
+  --path-a: #2a623d; /* green */
+  --path-b: #31566f; /* blue */
+  --path-c: #c77400; /* orange */
+  --path-d: #8b0000; /* red */
+  --path-s: #111; /* near-black */
+
+  --accent: var(--path-a);
+  color-scheme: light;
+}
+
+/* Reading a branch swaps the accent for the whole subtree, like ai-2027's .race class */
+.path-a { --accent: var(--path-a); }
+.path-b { --accent: var(--path-b); }
+.path-c { --accent: var(--path-c); }
+.path-d { --accent: var(--path-d); }
+.path-s { --accent: var(--path-s); }
+
+@theme inline {
+  --color-background: var(--vivid-background);
+  --color-foreground: var(--vivid-foreground);
+  --color-dull: var(--dull-foreground);
+  --color-dull-bg: var(--dull-background);
+  --color-accent: var(--accent);
+  --color-rule: var(--border);
+  --font-serif: var(--font-et-book), Palatino, "Palatino Linotype", "Palatino LT STD", "Book Antiqua", Georgia, serif;
+  --font-sans: var(--font-et-book), Palatino, "Palatino Linotype", Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+html {
+  background: var(--vivid-background);
+}
+
+body {
+  background: var(--vivid-background);
+  color: var(--vivid-foreground);
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  line-height: 1.6;
+  font-feature-settings: "onum" 0, "lnum" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 400;
+  text-wrap: balance;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--vivid-background);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The rounded 1.5px grey box ai-2027 uses for charts, cards and the dashboard */
+.graph-border-box {
+  border: 1.5px solid var(--border);
+  border-radius: 0.5rem;
+}
