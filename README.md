@@ -14,6 +14,35 @@ npm run dev
 
 Then open http://localhost:3000.
 
+## Writing a topic
+
+Each topic is a folder in `content/topics/<slug>/`:
+
+- `topic.json`: title, subtitle, intro questions, the dashboard (chart bands, share bar parts, metrics) and sources
+- `chapters/01-name.md`, `02-name.md`, ...: one file per chapter, in order
+
+A chapter's frontmatter sets what the dashboard shows while you read it:
+
+```markdown
+---
+title: "Early 2027: The Legal Answer"
+kind: forecast          # or "reported"
+date: "2027-03"         # quoted YYYY-MM
+label: "Clones under fire"
+level: 1.5              # height on the level chart (0 to number of bands)
+share: { code: 33, distribution: 27, trust: 18, data: 13, hardware: 9 }
+metrics: { twins: 35, ps5: 25, rebuild: 5, takedowns: 9 }
+---
+
+Markdown text. Footnotes work like this.[^1]
+
+:::expand[A collapsible deep-dive]
+Hidden until clicked.
+:::
+
+[^1]: [Source title](https://example.com)
+```
+
 ## Roadmap
 
 1. Shell and typography

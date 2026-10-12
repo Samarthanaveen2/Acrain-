@@ -82,3 +82,138 @@ a {
   border: 1.5px solid var(--border);
   border-radius: 0.5rem;
 }
+
+/* Chapter prose: Tufte-ish reading column */
+.prose-acrain {
+  max-width: 40rem;
+}
+.prose-acrain > * + * {
+  margin-top: 1rem;
+}
+.prose-acrain p,
+.prose-acrain li {
+  font-size: 1.2rem;
+  line-height: 1.65;
+}
+.prose-acrain a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  text-underline-offset: 2px;
+}
+.prose-acrain a:hover {
+  text-decoration-color: var(--accent);
+}
+.prose-acrain em {
+  font-style: italic;
+}
+.prose-acrain strong {
+  font-weight: 700;
+}
+.prose-acrain code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--dull-background);
+  padding: 0.05em 0.3em;
+  border-radius: 3px;
+}
+.prose-acrain ul {
+  list-style: disc;
+  padding-left: 1.4rem;
+}
+.prose-acrain ol {
+  list-style: decimal;
+  padding-left: 1.4rem;
+}
+.prose-acrain li + li {
+  margin-top: 0.3rem;
+}
+
+/* :::expand blocks — ai-2027's collapsible deep-dives */
+.prose-acrain details.expand {
+  border: 1.5px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.55rem 1rem;
+  background: var(--vivid-background);
+}
+.prose-acrain details.expand > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.15rem;
+}
+.prose-acrain details.expand > summary::-webkit-details-marker {
+  display: none;
+}
+.prose-acrain details.expand > summary::before {
+  content: "+";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--vivid-background);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.prose-acrain details.expand[open] > summary::before {
+  content: "−";
+}
+.prose-acrain details.expand[open] > summary {
+  margin-bottom: 0.6rem;
+}
+.prose-acrain details.expand > :not(summary) + * {
+  margin-top: 0.8rem;
+}
+.prose-acrain details.expand p,
+.prose-acrain details.expand li {
+  font-size: 1.08rem;
+}
+
+/* GFM footnotes: accent superscripts, small grey notes list per chapter */
+.prose-acrain sup a {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-decoration: none;
+  padding: 0 0.1em;
+}
+.prose-acrain section.footnotes {
+  margin-top: 1.4rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
+  padding-top: 0.6rem;
+}
+.prose-acrain section.footnotes h2 {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--dull-foreground);
+}
+.prose-acrain section.footnotes li,
+.prose-acrain section.footnotes p {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--dull-foreground);
+}
+.prose-acrain section.footnotes ol {
+  margin-top: 0.3rem;
+}
+.prose-acrain .data-footnote-backref,
+.prose-acrain a[data-footnote-backref] {
+  text-decoration: none;
+  margin-left: 0.25rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}

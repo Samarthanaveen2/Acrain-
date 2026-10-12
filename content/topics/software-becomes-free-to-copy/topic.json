@@ -1,0 +1,99 @@
+{
+  "title": "Software Becomes Free to Copy",
+  "subtitle": "In one month, a solo developer cloned seven Adobe apps and a hobby project started turning PS5 games into PC programs. This is my guess at what happens next, and where the value goes when copying costs nothing.",
+  "span": "2026 → 2030",
+  "summary": "AnyPS5 and the ArtCraft Adobe clones show copying getting cheap. Where does value move next, and where do I stand?",
+  "author": "Samartha",
+  "started": "Oct 12, 2026",
+  "updated": "Oct 12, 2026",
+  "questions": [
+    {
+      "q": "What is this?",
+      "a": "A story about how the next four years might go once AI makes rebuilding software cheap. The first chapter is reported from the news. Every chapter after it is my forecast, labelled as such."
+    },
+    {
+      "q": "Why does it matter to me?",
+      "a": "If code stops being a moat, the skills and bets that made sense for my parents' generation of programmers stop making sense for me. I want to see where the value moves before I commit years to anything."
+    },
+    {
+      "q": "How sure am I?",
+      "a": "Not very. The direction feels solid; the speed is a guess. The dashboard numbers after October 2026 are my estimates, not data."
+    },
+    {
+      "q": "What would change my mind?",
+      "a": "A court ruling that AI-assisted 'clean-room' rebuilds infringe copyright, or the clones stalling in alpha for a year. Either would slow everything in this story down."
+    }
+  ],
+  "dashboard": {
+    "levelLabel": "How easy is it to copy software?",
+    "bands": ["Currently exists", "Emerging", "Science fiction"],
+    "share": {
+      "label": "Where the value in software lives",
+      "parts": [
+        { "key": "code", "label": "The code" },
+        { "key": "distribution", "label": "Distribution" },
+        { "key": "trust", "label": "Trust & brand" },
+        { "key": "data", "label": "Data" },
+        { "key": "hardware", "label": "Hardware" }
+      ]
+    },
+    "metrics": [
+      { "key": "twins", "label": "Paid apps with a free AI-built twin", "short": "Free twins", "format": "number" },
+      { "key": "ps5", "label": "PS5 games running natively on PC", "short": "PS5 games on PC", "format": "number" },
+      { "key": "rebuild", "label": "Weeks for one dev to clone a pro app", "format": "number", "suffix": " wk" },
+      { "key": "takedowns", "label": "Legal takedowns of clone projects", "format": "number" }
+    ],
+    "note": "First chapter reflects reporting as of Oct 12, 2026. Everything after is my estimate."
+  },
+  "sources": [
+    {
+      "id": "petapixel",
+      "title": "Someone Rebuilt Free, Open-Source Versions of Photoshop, Premiere, and Lightroom Using AI",
+      "publisher": "PetaPixel",
+      "date": "Oct 7, 2026",
+      "url": "https://petapixel.com/2026/10/07/someone-rebuilt-free-open-source-versions-of-photoshop-premiere-and-lightroom-using-ai/"
+    },
+    {
+      "id": "notebookcheck",
+      "title": "Experienced Rust developer recreates Adobe suite with AI assistance as open source",
+      "publisher": "Notebookcheck",
+      "date": "Oct 2026",
+      "url": "https://www.notebookcheck.net/Photoshop-Premiere-more-Experienced-Rust-developer-recreates-Adobe-suite-with-AI-assistance-as-open-source.1419230.0.html"
+    },
+    {
+      "id": "vice",
+      "title": "Everything We Know About the Free Adobe Clones Built With AI. Do They Actually Work?",
+      "publisher": "Vice",
+      "date": "Oct 2026",
+      "url": "https://www.vice.com/en/article/everything-we-know-about-the-free-adobe-clones-built-with-ai-do-they-actually-work/"
+    },
+    {
+      "id": "techpowerup",
+      "title": "AnyPS5 Project Skips Emulation Entirely, Aims to Port PlayStation 5 Games to PC Directly",
+      "publisher": "TechPowerUp",
+      "date": "Oct 2026",
+      "url": "https://www.techpowerup.com/353098/anyps5-project-skips-emulation-entirely-aims-to-port-playstation-5-games-to-pc-directly"
+    },
+    {
+      "id": "elitegamers",
+      "title": "AnyPS5 Is Taking a Different Route to Run PS5 Games Natively on PC",
+      "publisher": "Elite Gamers",
+      "date": "Oct 2026",
+      "url": "https://elitegamers.net/news/anyps5-ps5-games-native-pc-without-emulator/"
+    },
+    {
+      "id": "allthings",
+      "title": "GTA 6 on PC: Can PS5 Emulation Run It in 2026?",
+      "publisher": "allthings.how",
+      "date": "Oct 2026",
+      "url": "https://allthings.how/gta-6-on-pc-can-ps5-emulation-run-it-in/"
+    },
+    {
+      "id": "pcgamesn",
+      "title": "GTA 6 release date",
+      "publisher": "PCGamesN",
+      "date": "Apr 29, 2026",
+      "url": "https://www.pcgamesn.com/gta-6-release-date"
+    }
+  ]
+}

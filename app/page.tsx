@@ -1,6 +1,8 @@
 import TopicCard from "@/components/TopicCard";
+import { listTopics } from "@/lib/topics";
 
 export default function Home() {
+  const topics = listTopics();
   return (
     <div className="mx-auto max-w-5xl px-4 pb-24">
       <section className="pt-14 pb-10 sm:pt-20">
@@ -23,16 +25,21 @@ export default function Home() {
       <section id="topics" className="scroll-mt-20 pt-10">
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-[1.9rem]">Topics</h2>
-          <span className="font-mono text-xs text-dull">1 topic</span>
+          <span className="font-mono text-xs text-dull">
+            {topics.length} {topics.length === 1 ? "topic" : "topics"}
+          </span>
         </div>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <TopicCard
-            href="/#topics"
-            span="2026 → 2030"
-            title="Software becomes free to copy"
-            summary="AnyPS5 and the ArtCraft Adobe clones show copying getting cheap. Where does value move next, and where do I stand?"
-            status="Phase 2"
-          />
+          {topics.map((t) => (
+            <TopicCard
+              key={t.slug}
+              href={`/topics/${t.slug}`}
+              span={t.span}
+              title={t.title}
+              summary={t.summary}
+              status={`${t.chapterCount} chapters`}
+            />
+          ))}
         </div>
       </section>
     </div>
