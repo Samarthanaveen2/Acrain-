@@ -64,3 +64,16 @@ jobs:
             Built from ${{ github.sha }}.
           files: Acrain.ipa
           make_latest: true
+
+      - name: Update the SideStore source (apps.json on the "sidestore" branch)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/releases?per_page=100" > releases.json
+          node phone/make-source.mjs releases.json "${{ github.repository }}" > apps.json
+          mkdir source && cp apps.json source/ && cp phone/app-assets/AppIcon-512@2x.png source/icon.png
+          cd source
+          git init -q -b sidestore
+          git add .
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" commit -qm "Update SideStore source for 1.0.${{ github.run_number }}"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" sidestore
