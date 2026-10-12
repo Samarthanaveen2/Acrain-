@@ -13,6 +13,7 @@ import { createNote, deleteNote, saveNote, subscribeNotes } from "./notes-store"
 import { back, navigate, usePath } from "./router";
 import TabBar from "./TabBar";
 import Settings from "./Settings";
+import { saveLayout, useMapLayout } from "./map-store";
 
 type Status = "loading" | "offline" | "ready";
 const wrap = "mx-auto max-w-[1166px] px-4 pb-24 min-[731px]:px-8";
@@ -93,6 +94,7 @@ function NewNote({ notes, initialTitle }: { notes: Note[]; initialTitle: string 
 }
 
 function Screen({ path, status, notes }: { path: string; status: Status; notes: Note[] }) {
+  const positions = useMapLayout();
   const [route, query = ""] = path.split("?");
   const m = route.match(/^\/notes\/([^/]+)(\/edit)?$/);
   const restore = async (list: Note[]) => {
@@ -104,7 +106,7 @@ function Screen({ path, status, notes }: { path: string; status: Status; notes: 
     if (status !== "ready") return <p className={`${wrap} pt-10 font-mono text-[13px] text-[#777]`}>Loading…</p>;
     return <NewNote key={title} notes={notes} initialTitle={title} />;
   }
-  if (route === "/map") return <NotesMap notes={notes} />;
+  if (route === "/map") return <NotesMap notes={notes} positions={positions} onSavePositions={saveLayout} />;
   if (route === "/timeline") return <NotesTimeline notes={notes} />;
   if (route === "/settings") return <Settings notes={notes} onRestore={restore} />;
   if (route === "/about")

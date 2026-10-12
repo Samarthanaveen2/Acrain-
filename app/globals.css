@@ -502,3 +502,8 @@ h3 {
 .pb-tabbar {
   padding-bottom: calc(4.5rem + var(--safe-bottom));
 }
+
+/* Map: fills the screen between the status bar and the tab bar */
+.map-screen {
+  height: calc(100dvh - var(--safe-top) - 4.5rem - var(--safe-bottom));
+}

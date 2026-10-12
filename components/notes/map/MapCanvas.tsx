@@ -1,0 +1,345 @@
+"use client";
+
+import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from "react";
+import { dotRadius, neighboursOf, type Graph } from "@/lib/map";
+
+type View = { x: number; y: number; k: number };
+export type MapHandle = { fit: (animate?: boolean) => void; centreOn: (id: string) => void };
+
+const MIN_K = 0.3;
+const MAX_K = 4;
+const TAP = 6; // px a finger can wander and still count as a tap
+const clampK = (k: number) => Math.min(MAX_K, Math.max(MIN_K, k));
+
+/**
+ * A pinch-zoom canvas: one finger pans (or drags a dot), two fingers zoom.
+ * `bottomInset` is the height covered by the peek card, so centring keeps the dot visible.
+ */
+export default function MapCanvas({
+  graph,
+  selected,
+  onSelect,
+  onMove,
+  bottomInset = 0,
+  ref,
+}: {
+  graph: Graph;
+  selected: string | null;
+  onSelect: (id: string | null) => void;
+  onMove: (id: string, x: number, y: number) => void;
+  bottomInset?: number;
+  ref?: Ref<MapHandle>;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  const [view, setView] = useState<View | null>(null);
+  const viewRef = useRef<View | null>(null);
+  const anim = useRef(0);
+  // Dots being dragged right now (not saved until the finger lifts)
+  const [moved, setMoved] = useState<Record<string, [number, number]>>({});
+
+  useLayoutEffect(() => {
+    const el = box.current!;
+    const ro = new ResizeObserver(() => setSize({ w: el.clientWidth, h: el.clientHeight }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const apply = useCallback((v: View) => {
+    viewRef.current = v;
+    setView(v);
+  }, []);
+
+  const animateTo = useCallback(
+    (to: View) => {
+      cancelAnimationFrame(anim.current);
+      const from = viewRef.current ?? to;
+      const t0 = performance.now();
+      const step = (t: number) => {
+        const p = Math.min(1, (t - t0) / 320);
+        const e = 1 - Math.pow(1 - p, 3);
+        apply({ x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e, k: from.k + (to.k - from.k) * e });
+        if (p < 1) anim.current = requestAnimationFrame(step);
+      };
+      anim.current = requestAnimationFrame(step);
+    },
+    [apply],
+  );
+
+  const pos = useCallback(
+    (id: string) => {
+      const m = moved[id];
+      if (m) return { x: m[0], y: m[1] };
+      const n = graph.nodes.find((n) => n.id === id);
+      return n ? { x: n.x, y: n.y } : null;
+    },
+    [graph, moved],
+  );
+
+  const fitView = useCallback((): View | null => {
+    if (!size.w || !graph.nodes.length) return null;
+    const xs = graph.nodes.map((n) => n.x);
+    const ys = graph.nodes.map((n) => n.y);
+    const pad = 50;
+    const minX = Math.min(...xs) - pad;
+    const maxX = Math.max(...xs) + pad;
+    const minY = Math.min(...ys) - pad;
+    const maxY = Math.max(...ys) + pad + 16;
+    const k = clampK(Math.min(size.w / (maxX - minX), size.h / (maxY - minY), 1.6));
+    return { k, x: size.w / 2 - ((minX + maxX) / 2) * k, y: size.h / 2 - ((minY + maxY) / 2) * k };
+  }, [graph, size]);
+
+  // First time the canvas has a size: show everything
+  useEffect(() => {
+    if (!viewRef.current) {
+      const v = fitView();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the first view depends on the measured size
+      if (v) apply(v);
+    }
+  }, [fitView, apply]);
+
+  const centreOn = useCallback(
+    (id: string) => {
+      const p = pos(id);
+      const v = viewRef.current;
+      if (!p || !v) return;
+      const k = Math.max(v.k, 0.9);
+      const visibleH = Math.max(120, size.h - bottomInset);
+      animateTo({ k, x: size.w / 2 - p.x * k, y: visibleH / 2 - p.y * k });
+    },
+    [pos, size, bottomInset, animateTo],
+  );
+
+  // A newly picked dot glides to the middle of the space above the peek card
+  const centreRef = useRef(centreOn);
+  useEffect(() => {
+    centreRef.current = centreOn;
+  });
+  useEffect(() => {
+    if (selected) centreRef.current(selected);
+  }, [selected, bottomInset]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      fit: (animate = true) => {
+        const v = fitView();
+        if (!v) return;
+        if (animate) animateTo(v);
+        else apply(v);
+      },
+      centreOn,
+    }),
+    [fitView, animateTo, apply, centreOn],
+  );
+
+  // ---- Gestures ----
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const gesture = useRef<{
+    kind: "none" | "pan" | "dot" | "pinch";
+    node?: string;
+    start: { x: number; y: number };
+    view: View;
+    nodeStart?: { x: number; y: number };
+    dist?: number;
+    mid?: { x: number; y: number };
+    movedFar: boolean;
+  } | null>(null);
+
+  const local = (e: { clientX: number; clientY: number }) => {
+    const r = box.current!.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+
+  const startPinch = () => {
+    const [a, b] = [...pointers.current.values()];
+    gesture.current = {
+      kind: "pinch",
+      start: a,
+      view: viewRef.current!,
+      dist: Math.hypot(b.x - a.x, b.y - a.y) || 1,
+      mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+      movedFar: true,
+    };
+  };
+
+  const down = (e: React.PointerEvent) => {
+    if (!viewRef.current) return;
+    cancelAnimationFrame(anim.current);
+    try {
+      (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    } catch {
+      // Not a real pointer (tests); moves still arrive on the canvas
+    }
+    const p = local(e);
+    pointers.current.set(e.pointerId, p);
+    if (pointers.current.size === 2) return startPinch();
+    if (pointers.current.size > 2) return;
+    const node = (e.target as Element).closest("[data-node]")?.getAttribute("data-node") ?? undefined;
+    gesture.current = {
+      kind: node ? "dot" : "pan",
+      node,
+      start: p,
+      view: viewRef.current,
+      nodeStart: node ? (pos(node) ?? undefined) : undefined,
+      movedFar: false,
+    };
+  };
+
+  const move = (e: React.PointerEvent) => {
+    if (!pointers.current.has(e.pointerId)) return;
+    const p = local(e);
+    pointers.current.set(e.pointerId, p);
+    const g = gesture.current;
+    if (!g) return;
+    if (g.kind === "pinch") {
+      const [a, b] = [...pointers.current.values()];
+      if (!b) return;
+      const dist = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const k = clampK(g.view.k * (dist / g.dist!));
+      // Keep the world point under the starting midpoint under the fingers
+      const wx = (g.mid!.x - g.view.x) / g.view.k;
+      const wy = (g.mid!.y - g.view.y) / g.view.k;
+      apply({ k, x: mid.x - wx * k, y: mid.y - wy * k });
+      return;
+    }
+    const dx = p.x - g.start.x;
+    const dy = p.y - g.start.y;
+    if (!g.movedFar && Math.hypot(dx, dy) < TAP) return;
+    g.movedFar = true;
+    if (g.kind === "pan") apply({ ...g.view, x: g.view.x + dx, y: g.view.y + dy });
+    else if (g.kind === "dot" && g.node && g.nodeStart) {
+      const k = viewRef.current!.k;
+      setMoved((m) => ({ ...m, [g.node!]: [g.nodeStart!.x + dx / k, g.nodeStart!.y + dy / k] }));
+    }
+  };
+
+  const up = (e: React.PointerEvent) => {
+    if (!pointers.current.delete(e.pointerId)) return;
+    const g = gesture.current;
+    if (g?.kind === "pinch") {
+      // One finger still down: carry on as a pan from here
+      const rest = [...pointers.current.values()][0];
+      gesture.current = rest ? { kind: "pan", start: rest, view: viewRef.current!, movedFar: true } : null;
+      return;
+    }
+    gesture.current = null;
+    if (!g || e.type === "pointercancel") return;
+    if (!g.movedFar) {
+      onSelect(g.kind === "dot" && g.node ? (g.node === selected ? null : g.node) : null);
+    } else if (g.kind === "dot" && g.node) {
+      const m = moved[g.node];
+      if (m) onMove(g.node, m[0], m[1]);
+    }
+  };
+
+  // Once a dragged dot's new place arrives from storage, forget the temporary copy
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- clears drag overrides when saved positions come back
+    setMoved((m) => {
+      const left = Object.fromEntries(
+        Object.entries(m).filter(([id, [x, y]]) => {
+          const n = graph.nodes.find((n) => n.id === id);
+          return n && (Math.abs(n.x - x) > 0.5 || Math.abs(n.y - y) > 0.5);
+        }),
+      );
+      return Object.keys(left).length === Object.keys(m).length ? m : left;
+    });
+  }, [graph]);
+
+  const wheel = (e: React.WheelEvent) => {
+    const v = viewRef.current;
+    if (!v) return;
+    const p = local(e);
+    const k = clampK(v.k * Math.exp(-e.deltaY * 0.002));
+    apply({ k, x: p.x - ((p.x - v.x) / v.k) * k, y: p.y - ((p.y - v.y) / v.k) * k });
+  };
+
+  const near = neighboursOf(graph, selected);
+  const k = view?.k ?? 1;
+  const xy = (id: string) => pos(id) ?? { x: 0, y: 0 };
+
+  return (
+    <div ref={box} className="map-canvas relative h-full w-full overflow-hidden">
+      <svg
+        className="block h-full w-full touch-none select-none"
+        role="img"
+        aria-label="Map of notes and their links"
+        onPointerDown={down}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerCancel={up}
+        onWheel={wheel}
+      >
+        {view && (
+          <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
+            {graph.edges.map((e) => {
+              const a = xy(e.a);
+              const b = xy(e.b);
+              const lit = selected && (e.a === selected || e.b === selected);
+              const ghost = e.a.startsWith("missing:") || e.b.startsWith("missing:");
+              return (
+                <line
+                  key={`${e.a}|${e.b}`}
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  stroke={lit ? "var(--accent)" : "#b9b9ae"}
+                  strokeWidth={(lit ? 2.4 : 1.3) / Math.sqrt(k)}
+                  strokeDasharray={ghost ? "4 3" : undefined}
+                  opacity={selected && !lit ? 0.25 : 1}
+                />
+              );
+            })}
+            {graph.nodes.map((n) => {
+              const p = xy(n.id);
+              const on = n.id === selected;
+              const lit = on || near.has(n.id);
+              const dim = selected && !lit;
+              const r = dotRadius(n);
+              const showLabel = lit || k >= 0.7 || (k >= 0.45 && n.degree >= 3);
+              const label = n.title.length > 26 ? `${n.title.slice(0, 25)}…` : n.title;
+              return (
+                <g
+                  key={n.id}
+                  data-node={n.id}
+                  transform={`translate(${p.x},${p.y})`}
+                  opacity={dim ? 0.22 : 1}
+                  className="cursor-pointer"
+                  style={{ transition: "opacity 200ms" }}
+                >
+                  <circle r={Math.max(r + 8, 20 / k)} fill="transparent" />
+                  {on && <circle r={r + 6} fill="none" stroke="var(--accent)" strokeWidth={2} opacity={0.35} />}
+                  <circle
+                    r={r}
+                    fill={n.note ? (on ? "var(--accent)" : lit && selected ? "#2b2b2b" : "#111") : "#fffff8"}
+                    stroke={n.note ? "none" : on ? "var(--accent)" : "#8a8a80"}
+                    strokeDasharray={n.note ? undefined : "3 2"}
+                    strokeWidth={1.5}
+                  />
+                  {showLabel && (
+                    <text
+                      y={r + 14}
+                      textAnchor="middle"
+                      fontSize={on ? 14 : 12.5}
+                      fontWeight={on ? 600 : 400}
+                      fill={n.note ? "#111" : "#8a8a80"}
+                      stroke="#fffff8"
+                      strokeWidth={3.5}
+                      paintOrder="stroke"
+                      className="pointer-events-none font-serif"
+                    >
+                      {label}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
