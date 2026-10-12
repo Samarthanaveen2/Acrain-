@@ -14,6 +14,14 @@ On October 7, Brandon Thomas of the ArtCraft project released seven open-source 
 
 Meanwhile AnyPS5, a hobby project, skips emulation entirely. It translates PS5 games into native Windows and Linux programs. Its coverage of PS5 graphics instructions reportedly jumped from about 50% to 96% in a single week, and Dead Cells now runs as a plain `.exe`.[^anyps5]
 
+```chart
+type: bar
+title: AnyPS5 coverage of PS5 graphics instructions
+unit: %, approximate
+A week earlier: 50
+Early October: 96
+```
+
 :::expand[Why "clean-room" matters]
 In the 1980s, Phoenix Technologies legally copied IBM's BIOS by splitting the work: one team wrote down what the BIOS *did*, and a second team, who never saw IBM's code, wrote new code from that description. Courts accepted it, and the PC clone industry was born.
 

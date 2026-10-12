@@ -43,6 +43,25 @@ Hidden until clicked.
 [^1]: [Source title](https://example.com)
 ```
 
+### Charts
+
+Put a chart anywhere in a chapter with a `chart` code block. Each line is `label: number`;
+month labels (`2027-03`) on a line chart are spaced by time.
+
+````markdown
+```chart
+type: line          # line or bar
+title: PS5 games running natively on PC
+unit: games
+2026-10: 2
+2027-03: 25
+2027-10: 120
+```
+````
+
+Every topic page also gets a **Trends** section: one line chart per dashboard metric, drawn
+from the chapters' numbers.
+
 ## Roadmap
 
 1. Shell and typography

@@ -25,17 +25,29 @@ export default function TopicScroll({
 
   useEffect(() => {
     const els = Array.from(ref.current?.querySelectorAll<HTMLElement>("[data-chapter]") ?? []);
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) setActive(Number((e.target as HTMLElement).dataset.chapter));
-        }
-      },
-      // A thin line just above the middle of the viewport
-      { rootMargin: "-45% 0px -54% 0px" },
-    );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    let frame = 0;
+    // The active chapter is the last one whose top has passed the middle of the screen.
+    // Reading positions (rather than watching crossings) stays right after jumps to #links.
+    const update = () => {
+      frame = 0;
+      const line = window.innerHeight * 0.5;
+      let current = 0;
+      for (const el of els) {
+        if (el.getBoundingClientRect().top <= line) current = Number(el.dataset.chapter);
+      }
+      setActive(current);
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, []);
 
   return (

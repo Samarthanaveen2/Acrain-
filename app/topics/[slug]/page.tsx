@@ -5,6 +5,7 @@ import TopicHeader from "@/components/topic/TopicHeader";
 import TopicScroll from "@/components/topic/TopicScroll";
 import ChapterBody from "@/components/topic/ChapterBody";
 import Sources from "@/components/topic/Sources";
+import Trends from "@/components/topic/Trends";
 
 export function generateStaticParams() {
   return listTopicSlugs().map((slug) => ({ slug }));
@@ -43,6 +44,7 @@ export default async function TopicPage({ params }: PageProps<"/topics/[slug]">)
               </div>
             </section>
           ))}
+          <Trends def={topic.dashboard} chapters={topic.chapters} />
           <Sources sources={topic.sources} />
         </div>
       </TopicScroll>
