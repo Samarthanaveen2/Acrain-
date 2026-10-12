@@ -1,5 +1,5 @@
 import type { Note } from "@/lib/notes";
-import { renameLinks } from "@/lib/notes";
+import { renameInDoc, renameLinks } from "@/lib/notes";
 import { getDb } from "./store";
 
 // Notes live in the artifact's db, one document per note at notes/<id>
@@ -28,8 +28,13 @@ export async function saveNote(note: Note, previousTitle: string, all: Note[]) {
   if (previousTitle && previousTitle.trim().toLowerCase() !== note.title.trim().toLowerCase()) {
     for (const other of all) {
       if (other.id === note.id) continue;
-      const body = renameLinks(other.body, previousTitle, note.title);
-      if (body !== other.body) await put({ ...other, body });
+      if (other.doc) {
+        const doc = renameInDoc(other.doc, previousTitle, note.title);
+        if (JSON.stringify(doc) !== JSON.stringify(other.doc)) await put({ ...other, doc });
+      } else {
+        const body = renameLinks(other.body, previousTitle, note.title);
+        if (body !== other.body) await put({ ...other, body });
+      }
     }
   }
 }

@@ -259,3 +259,210 @@ h3 {
   color: #8a8a80;
   text-decoration-style: dashed;
 }
+
+/* ---------- Rich note editor / reader ---------- */
+.rich-doc {
+  outline: none;
+  counter-reset: fn;
+}
+.rich-doc[contenteditable="true"] {
+  min-height: 16rem;
+}
+.rich-doc > * + * {
+  margin-top: 1.1rem;
+}
+.rich-doc h2 {
+  font-size: 2rem;
+  line-height: 1.2;
+}
+.rich-doc h3 {
+  font-size: 1.6rem;
+}
+.rich-doc p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #9a9a90;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.rich-doc a {
+  color: var(--accent);
+}
+
+/* Deep-dive box: ai-2027's bordered collapsible */
+.deep-dive {
+  border: 1.5px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.6rem 0.3rem 0.4rem;
+}
+.deep-dive-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.deep-dive-toggle {
+  display: flex;
+  padding: 0.2rem;
+  transition: transform 0.2s;
+}
+.deep-dive[data-open="true"] .deep-dive-toggle {
+  transform: rotate(90deg);
+}
+.deep-dive-title {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  outline: none;
+  font-size: 1.35rem;
+  font-family: var(--font-serif);
+}
+.deep-dive-body {
+  padding: 0.4rem 0.2rem 0.5rem 1.9rem;
+}
+.deep-dive[data-open="false"] .deep-dive-body {
+  display: none;
+}
+
+/* Footnotes: numbered by order with a CSS counter; tap to read or edit */
+.fn {
+  position: relative;
+}
+.fn-ref {
+  display: inline-block;
+  vertical-align: super;
+  font-size: 0.72rem;
+  line-height: 1;
+  min-width: 1.1em;
+  text-align: center;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  padding: 0 0.12em;
+  cursor: pointer;
+}
+.fn-ref::after {
+  counter-increment: fn;
+  content: counter(fn);
+}
+.fn-selected .fn-ref {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-radius: 3px;
+}
+.fn-pop {
+  position: absolute;
+  z-index: 15;
+  left: 50%;
+  top: 1.6em;
+  transform: translateX(-50%);
+  width: min(18rem, 80vw);
+  display: block;
+  background: #fffff8;
+  border: 1.5px solid #111;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.12);
+  white-space: normal;
+}
+.fn-pop textarea {
+  width: 100%;
+  background: transparent;
+  outline: none;
+  resize: none;
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+}
+.fn-pop-actions {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  margin-top: 0.3rem;
+}
+.fn-close {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+}
+
+/* Links between notes */
+.note-link > span {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.note-link-missing > span {
+  color: #8a8a80;
+  text-decoration-style: dashed;
+}
+.note-link-selected > span {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-radius: 3px;
+}
+
+/* Chart block and its little form */
+.chart-form {
+  margin-top: 0.6rem;
+  display: grid;
+  gap: 0.5rem;
+  border: 1.5px solid #c9c9bf;
+  border-radius: 0.5rem;
+  padding: 0.6rem;
+  font-size: 1.05rem;
+}
+.chart-form input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #c9c9bf;
+  border-radius: 0.375rem;
+  background: #fffff8;
+  padding: 0.3rem 0.55rem;
+  outline: none;
+}
+.chart-form input:focus {
+  border-color: #111;
+}
+.seg {
+  display: flex;
+  flex-shrink: 0;
+  border: 1px solid #c9c9bf;
+  border-radius: 0.375rem;
+  padding: 2px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.seg button {
+  padding: 0.15rem 0.6rem;
+  border-radius: 0.25rem;
+}
+.seg button[aria-pressed="true"] {
+  background: #111;
+  color: #fffff8;
+}
+.chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid #c9c9bf;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.block-icon-btn {
+  display: flex;
+  align-items: center;
+  padding: 0.3rem;
+  color: #777;
+  border-radius: 0.375rem;
+}
+.block-icon-btn:hover {
+  color: #111;
+  background: rgb(17 17 17 / 0.06);
+}
+.ProseMirror-selectednode.chart-node {
+  outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 0.5rem;
+}

@@ -6,6 +6,7 @@ import NotesHome from "@/components/notes/NotesHome";
 import NoteView from "@/components/notes/NoteView";
 import NoteEditor from "@/components/notes/NoteEditor";
 import { findNote, freeId, type Note } from "@/lib/notes";
+import { NotesContext } from "@/components/notes/rich/context";
 import { createNote, deleteNote, saveNote, subscribeNotes } from "./notes-store";
 import { navigate, usePath } from "./router";
 
@@ -104,11 +105,17 @@ function App() {
         <p>Acrain is where I think about the world: notes on ideas, and the connections between them.</p>
       </ComingSoon>
     );
+  const openNote = (title: string) => {
+    const hit = findNote(notes, title);
+    navigate(hit ? `/notes/${hit.id}` : `/new-note?title=${encodeURIComponent(title)}`);
+  };
   if (m) {
     const note = notes.find((n) => n.id === m[1]);
     if (!note)
       return <p className={`${wrap} pt-10 font-mono text-[13px] text-[#777]`}>{status === "loading" ? "Loading…" : "Note not found."}</p>;
-    return m[2] ? (
+    return (
+      <NotesContext.Provider value={{ notes, openNote }}>
+        {m[2] ? (
       <NoteEditor
         key={note.id}
         initial={note}
@@ -121,6 +128,8 @@ function App() {
       />
     ) : (
       <NoteView key={note.id} note={note} notes={notes} />
+        )}
+      </NotesContext.Provider>
     );
   }
   return <NotesHome notes={notes} status={status} />;

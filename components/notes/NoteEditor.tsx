@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
-import MarkdownField from "@/components/editor/MarkdownField";
 import { inputCls } from "@/components/editor/fields";
-import { parseTags, resolveWikilinks, type Note } from "@/lib/notes";
+import { markdownToHtml, parseTags, type Note } from "@/lib/notes";
+import RichEditor from "./rich/RichEditor";
 
 type Status = { type: "idle" | "saving" | "saved" | "error"; message?: string };
 
@@ -91,7 +91,7 @@ export default function NoteEditor({
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-[860px] gap-4 px-4 pt-6 pb-24">
+      <main className="mx-auto grid max-w-[860px] grid-cols-[minmax(0,1fr)] gap-4 px-4 pt-6 pb-24">
         <input
           aria-label="Note title"
           value={note.title}
@@ -109,17 +109,15 @@ export default function NoteEditor({
           }}
           className={`${inputCls} font-mono text-[14px]`}
         />
-        <MarkdownField
-          id={note.id}
-          value={note.body}
-          onChange={(body) => edit({ body })}
-          placeholder="Write what you think. Link to other ideas with [[Their title]]."
-          linkTargets={others}
-          previewTransform={(b) => resolveWikilinks(b, notes)}
+        <RichEditor
+          initial={note.doc ?? markdownToHtml(note.body)}
+          titles={others}
+          placeholder="Write what you think…"
+          onChange={(doc, text) => edit({ doc, body: text })}
         />
         <p className="font-mono text-[11.5px] leading-relaxed text-[#888]">
-          Tip: <code>[[Note title]]</code> links to another note (tapping a link to a note you haven&rsquo;t written yet
-          creates it). Renaming this note updates links to it in your other notes.
+          Tip: type <b>[[</b> or tap <b>Note</b> to link another idea. Tapping a link to a note you haven&rsquo;t written
+          yet creates it.
         </p>
 
         <div className="mt-6 border-t border-[#666]/20 pt-4">

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
-import { backlinks, fmtDate, linksIn, type Note } from "@/lib/notes";
+import { backlinks, fmtDate, noteLinks, type Note } from "@/lib/notes";
 
 /** First readable line of a note, for the list */
 function preview(body: string) {
@@ -110,7 +110,7 @@ export default function NotesHome({ notes, status }: { notes: Note[]; status: "l
             ) : (
               <ol className="mt-5 grid">
                 {shown.map((n) => {
-                  const outs = linksIn(n.body).length;
+                  const outs = noteLinks(n).length;
                   const ins = backlinks(notes, n).length;
                   return (
                     <li key={n.id} className="border-b border-[#666]/20">

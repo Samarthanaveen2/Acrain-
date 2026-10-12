@@ -3,17 +3,15 @@
 import Link from "next/link";
 import { PenLine } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
-import ChapterBody from "@/components/topic/ChapterBody";
-import Footnotes from "@/components/topic/Footnotes";
-import { collectNotes } from "@/lib/footnotes";
-import { backlinks, findNote, fmtDate, linksIn, resolveWikilinks, type Note } from "@/lib/notes";
+import { backlinks, findNote, fmtDate, footnotesIn, markdownToHtml, noteLinks, type Note } from "@/lib/notes";
+import RichView from "./rich/RichView";
 
 /** Reading a note: ai-2027 typography, then what it connects to and what connects to it */
 export default function NoteView({ note, notes }: { note: Note; notes: Note[] }) {
-  const body = resolveWikilinks(note.body, notes);
-  const { notes: footnotes, numbers } = collectNotes([{ id: note.id, body }]);
   const linkedFrom = backlinks(notes, note);
-  const linksTo = linksIn(note.body).map((t) => ({ title: t, note: findNote(notes, t) }));
+  const linksTo = noteLinks(note).map((t) => ({ title: t, note: findNote(notes, t) }));
+  const footnotes = note.doc ? footnotesIn(note.doc) : [];
+  const empty = !note.body.trim() && !note.doc?.content?.some((c) => c.content?.length || c.type !== "paragraph");
   const sep = <span className="text-[#bbb]">|</span>;
 
   return (
@@ -44,8 +42,8 @@ export default function NoteView({ note, notes }: { note: Note; notes: Note[] })
         )}
 
         <div className="mt-8">
-          {note.body.trim() ? (
-            <ChapterBody body={body} notes={numbers[note.id]} />
+          {!empty ? (
+            <RichView doc={note.doc ?? markdownToHtml(note.body)} />
           ) : (
             <p className="text-[1.3rem] text-[#777]">
               Empty note.{" "}
@@ -97,9 +95,19 @@ export default function NoteView({ note, notes }: { note: Note; notes: Note[] })
           </section>
         )}
 
-        <div className="mt-12">
-          <Footnotes notes={footnotes} />
-        </div>
+        {footnotes.length > 0 && (
+          <section className="mt-12 border-t border-[#666]/30 pt-6">
+            <h2 className="text-[1.5rem]">Footnotes</h2>
+            <ol className="mt-3 grid gap-3">
+              {footnotes.map((t, i) => (
+                <li key={i} className="grid grid-cols-[2.6rem_minmax(0,1fr)] text-[1.2rem] leading-snug">
+                  <span className="text-[#777]">[{i + 1}]</span>
+                  <span>{t || "—"}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
       </div>
     </div>
   );
