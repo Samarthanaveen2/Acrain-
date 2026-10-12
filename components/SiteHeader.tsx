@@ -1,6 +1,10 @@
 import Link from "next/link";
 
-const links = [{ href: "/", label: "Notes" }];
+const links = [
+  { href: "/", label: "Notes" },
+  { href: "/map", label: "Map" },
+  { href: "/timeline", label: "Timeline" },
+];
 
 /** ai-2027's header: huge serif title and byline on the left, plain nav on the right with a boxed last link */
 export default function SiteHeader({ title, byline }: { title: string; byline?: React.ReactNode }) {
@@ -10,9 +14,9 @@ export default function SiteHeader({ title, byline }: { title: string; byline?: 
         <h1 className="text-[4.2rem] leading-[1.02] tracking-[-0.01em] min-[731px]:text-[4.7rem]">{title}</h1>
         {byline && <p className="mt-3 text-[1.75rem] leading-tight tracking-[-0.035em]">{byline}</p>}
       </div>
-      <nav className="flex shrink-0 items-center justify-end gap-1 text-[1.6rem] min-[731px]:pt-3">
+      <nav className="flex shrink-0 items-center justify-end gap-0.5 text-[1.4rem] min-[731px]:gap-1 min-[731px]:pt-3 min-[731px]:text-[1.6rem]">
         {links.map((l) => (
-          <Link key={l.href} href={l.href} className="px-3 py-1 no-underline hover:underline">
+          <Link key={l.href} href={l.href} className="px-2 py-1 no-underline hover:underline min-[731px]:px-3">
             {l.label}
           </Link>
         ))}

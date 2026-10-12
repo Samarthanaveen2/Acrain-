@@ -21,9 +21,9 @@ function preview(body: string) {
   return line ?? "";
 }
 
-export default function NotesHome({ notes, status }: { notes: Note[]; status: "loading" | "offline" | "ready" }) {
+export default function NotesHome({ notes, status, initialTag = null }: { notes: Note[]; status: "loading" | "offline" | "ready"; initialTag?: string | null }) {
   const [q, setQ] = useState("");
-  const [tag, setTag] = useState<string | null>(null);
+  const [tag, setTag] = useState<string | null>(initialTag);
 
   const tags = useMemo(() => {
     const count = new Map<string, number>();

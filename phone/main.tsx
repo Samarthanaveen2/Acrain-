@@ -5,6 +5,8 @@ import ComingSoon from "@/components/ComingSoon";
 import NotesHome from "@/components/notes/NotesHome";
 import NoteView from "@/components/notes/NoteView";
 import NoteEditor from "@/components/notes/NoteEditor";
+import NotesMap from "@/components/notes/NotesMap";
+import NotesTimeline from "@/components/notes/NotesTimeline";
 import { findNote, freeId, type Note } from "@/lib/notes";
 import { NotesContext } from "@/components/notes/rich/context";
 import { createNote, deleteNote, saveNote, subscribeNotes } from "./notes-store";
@@ -99,6 +101,8 @@ function App() {
     if (status !== "ready") return <p className={`${wrap} pt-10 font-mono text-[13px] text-[#777]`}>Loading…</p>;
     return <NewNote key={title} notes={notes} initialTitle={title} />;
   }
+  if (route === "/map") return <NotesMap notes={notes} />;
+  if (route === "/timeline") return <NotesTimeline notes={notes} />;
   if (route === "/about")
     return (
       <ComingSoon title="About">
@@ -132,7 +136,8 @@ function App() {
       </NotesContext.Provider>
     );
   }
-  return <NotesHome notes={notes} status={status} />;
+  const tag = new URLSearchParams(query).get("tag");
+  return <NotesHome key={tag ?? ""} notes={notes} status={status} initialTag={tag} />;
 }
 
 createRoot(document.getElementById("acrain-root")!).render(

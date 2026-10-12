@@ -34,9 +34,9 @@ export default function NoteView({ note, notes }: { note: Note; notes: Note[] })
         {note.tags.length > 0 && (
           <p className="mt-2 flex flex-wrap gap-1.5">
             {note.tags.map((t) => (
-              <span key={t} className="rounded-md border border-[#c9c9bf] px-1.5 font-mono text-[12px] text-[#555]">
+              <Link key={t} href={`/?tag=${encodeURIComponent(t)}`} className="rounded-md border border-[#c9c9bf] px-1.5 font-mono text-[12px] text-[#555] no-underline">
                 #{t}
-              </span>
+              </Link>
             ))}
           </p>
         )}
