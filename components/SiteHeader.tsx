@@ -1,9 +1,6 @@
 import Link from "next/link";
 
-const links = [
-  { href: "/#topics", label: "Topics" },
-  { href: "/optionality", label: "Optionality" },
-];
+const links = [{ href: "/", label: "Notes" }];
 
 /** ai-2027's header: huge serif title and byline on the left, plain nav on the right with a boxed last link */
 export default function SiteHeader({ title, byline }: { title: string; byline?: React.ReactNode }) {

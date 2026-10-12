@@ -1,3 +1,4 @@
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkDirective from "remark-directive";
@@ -24,6 +25,13 @@ export default function ChapterBody({ body, notes = {} }: { body: string; notes?
         remarkPlugins={[remarkGfm, remarkDirective, remarkExpand, [remarkGlobalNotes, { numbers: notes }]]}
         components={{
           a: ({ href, children, node, ...rest }) => {
+            // Links between notes stay inside the app; a link to a note that doesn't exist yet looks faded
+            if (href?.startsWith("/"))
+              return (
+                <Link href={href} className={href.startsWith("/new-note") ? "wikilink wikilink-missing" : "wikilink"}>
+                  {children}
+                </Link>
+              );
             const external = href?.startsWith("http");
             return (
               <a href={href} {...rest} {...(external ? { target: "_blank", rel: "noreferrer" } : {})}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { BarChart3, Link2, ListCollapse, Quote } from "lucide-react";
+import { BarChart3, Link2, ListCollapse, Network, Quote } from "lucide-react";
 import ChapterBody from "@/components/topic/ChapterBody";
 import { collectNotes } from "@/lib/footnotes";
 
@@ -13,14 +13,22 @@ export default function MarkdownField({
   value,
   onChange,
   placeholder,
+  linkTargets,
+  previewTransform,
 }: {
   id: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  /** Titles of other notes, for the "Link note" picker */
+  linkTargets?: string[];
+  /** Applied to the text before the preview renders it (e.g. resolving [[links]]) */
+  previewTransform?: (body: string) => string;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [tab, setTab] = useState<"write" | "preview">("write");
+  const [picking, setPicking] = useState(false);
+  const [pickQuery, setPickQuery] = useState("");
 
   // Insert text at the cursor (or around the selection) and put the cursor where `select` says
   const insert = (make: (selected: string) => { text: string; select?: [number, number] }, block = false) => {
@@ -101,9 +109,45 @@ export default function MarkdownField({
             >
               <Link2 size={14} /> Link
             </button>
+            {linkTargets && (
+              <button type="button" className={tool} onClick={() => setPicking((v) => !v)} aria-expanded={picking}>
+                <Network size={14} /> Link note
+              </button>
+            )}
           </>
         )}
       </div>
+      {picking && tab === "write" && linkTargets && (
+        <div className="border-b border-[#c9c9bf] px-2 py-2">
+          <input
+            autoFocus
+            aria-label="Find a note to link"
+            value={pickQuery}
+            onChange={(e) => setPickQuery(e.target.value)}
+            placeholder="Type a note title (new titles create a new note)"
+            className="w-full rounded-md border border-[#c9c9bf] bg-background px-2 py-1 font-mono text-[13px] outline-none focus:border-[#111]"
+          />
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {[
+              ...linkTargets.filter((t) => t.toLowerCase().includes(pickQuery.trim().toLowerCase())).slice(0, 12),
+              ...(pickQuery.trim() && !linkTargets.some((t) => t.toLowerCase() === pickQuery.trim().toLowerCase()) ? [pickQuery.trim()] : []),
+            ].map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => {
+                  insert(() => ({ text: `[[${t}]]` }));
+                  setPicking(false);
+                  setPickQuery("");
+                }}
+                className="rounded-md border border-[#111] px-2 py-0.5 text-[1.05rem] hover:bg-[#111] hover:text-background"
+              >
+                {linkTargets.includes(t) ? t : `+ ${t}`}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {tab === "write" ? (
         <textarea
           ref={ref}
@@ -116,7 +160,7 @@ export default function MarkdownField({
         />
       ) : (
         <div className="min-h-[20rem] px-4 py-3">
-          {value.trim() ? <ChapterBody body={value} notes={notes} /> : <p className="text-[1.2rem] text-[#888]">Nothing written yet.</p>}
+          {value.trim() ? <ChapterBody body={previewTransform ? previewTransform(value) : value} notes={notes} /> : <p className="text-[1.2rem] text-[#888]">Nothing written yet.</p>}
         </div>
       )}
     </div>

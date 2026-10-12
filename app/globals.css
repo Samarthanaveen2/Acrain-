@@ -64,8 +64,11 @@ h3 {
   text-wrap: balance;
 }
 
-a {
-  color: inherit;
+/* In the base layer so Tailwind utilities (like text-background on a button-style link) win */
+@layer base {
+  a {
+    color: inherit;
+  }
 }
 
 ::selection {
@@ -245,4 +248,14 @@ a {
     transition-duration: 0ms !important;
     animation-duration: 0ms !important;
   }
+}
+
+/* [[Links]] between notes: solid underline in accent; links to notes not written yet are dashed and faded */
+.prose-acrain a.wikilink {
+  color: var(--accent);
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.prose-acrain a.wikilink-missing {
+  color: #8a8a80;
+  text-decoration-style: dashed;
 }
