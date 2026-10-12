@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Maximize } from "lucide-react";
+import { Maximize, Sparkles } from "lucide-react";
 import { buildGraph, clusters, colourOf, layout, neighboursOf, themes, UNTAGGED, type Positions } from "@/lib/map";
 import { findNote, noteLinks, type Note } from "@/lib/notes";
 import Link from "next/link";
 import MapCanvas, { type MapHandle } from "./map/MapCanvas";
 import PeekCard from "./map/PeekCard";
+import LooseEnds from "./map/LooseEnds";
 
 /** The Map screen: every note is a dot, links are lines. Pinch, drag, tap to explore. */
 export default function NotesMap({
@@ -56,6 +57,9 @@ export default function NotesMap({
     });
   }, [graph, theme, colours]);
 
+  const [loose, setLoose] = useState(false);
+  const looseCount = graph.nodes.filter((n) => !n.note || n.degree === 0).length;
+
   const node = graph.nodes.find((n) => n.id === selected);
   const near = neighboursOf(graph, selected);
   const neighbours = graph.nodes.filter((n) => near.has(n.id)).sort((a, b) => Number(!!b.note) - Number(!!a.note) || b.degree - a.degree);
@@ -78,7 +82,11 @@ export default function NotesMap({
   const hop = (id: string) => setSelected(id);
 
   // A short message at the top of the map, sometimes with Undo or Write
-  const [toast, setToast] = useState<{ text: string; undo?: () => Promise<void>; href?: string } | null>(null);
+  const [toast, setToast] = useState<{
+    text: string;
+    undo?: () => Promise<void>;
+    href?: string;
+  } | null>(null);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 5000);
@@ -89,7 +97,10 @@ export default function NotesMap({
     const from = notes.find((n) => n.id === fromId);
     const to = graph.nodes.find((n) => n.id === toId);
     if (!from || !to || !onLink) return;
-    if (noteLinks(from).some((t) => t.toLowerCase() === to.title.toLowerCase()) || (to.note && noteLinks(to.note).some((t) => findNote(notes, t)?.id === from.id))) {
+    if (
+      noteLinks(from).some((t) => t.toLowerCase() === to.title.toLowerCase()) ||
+      (to.note && noteLinks(to.note).some((t) => findNote(notes, t)?.id === from.id))
+    ) {
       setToast({ text: `Already linked to ${to.title}` });
       return;
     }
@@ -97,12 +108,18 @@ export default function NotesMap({
       const undo = await onLink(from, to.title);
       setToast({ text: `Linked ${from.title} → ${to.title}`, undo });
     } catch (e) {
-      setToast({ text: `Couldn't link (${(e as { message?: string })?.message ?? String(e)})` });
+      setToast({
+        text: `Couldn't link (${(e as { message?: string })?.message ?? String(e)})`,
+      });
     }
   };
 
   // Long-press on empty space: a new note right there
-  const [draft, setDraft] = useState<{ x: number; y: number; title: string } | null>(null);
+  const [draft, setDraft] = useState<{
+    x: number;
+    y: number;
+    title: string;
+  } | null>(null);
   const create = async (write: boolean) => {
     if (!draft || !draft.title.trim() || !onCreate) return;
     const { x, y, title } = draft;
@@ -116,7 +133,9 @@ export default function NotesMap({
       setSelected(id);
       setToast({ text: `Added ${title.trim()}`, href: `/notes/${id}/edit` });
     } catch (e) {
-      setToast({ text: `Couldn't add the note (${(e as { message?: string })?.message ?? String(e)})` });
+      setToast({
+        text: `Couldn't add the note (${(e as { message?: string })?.message ?? String(e)})`,
+      });
     }
   };
 
@@ -130,21 +149,42 @@ export default function NotesMap({
           </p>
         </div>
         {notes.length > 0 && (
-          <button
-            type="button"
-            onClick={() => {
-              setSelected(null);
-              canvas.current?.fit();
-            }}
-            className="flex items-center gap-1.5 rounded-md border-[1.5px] border-[#111] px-2.5 py-1 text-[1.15rem]"
-          >
-            <Maximize size={15} /> Fit
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              aria-pressed={loose}
+              onClick={() => {
+                setSelected(null);
+                setDraft(null);
+                setLoose((v) => !v);
+              }}
+              className={`flex items-center gap-1.5 rounded-md border-[1.5px] border-[#111] px-2.5 py-1 text-[1.15rem] ${loose ? "bg-[#111] text-[#fffff8]" : ""}`}
+            >
+              <Sparkles size={15} /> Loose ends
+              {looseCount > 0 && (
+                <span className={`font-mono text-[10px] ${loose ? "text-[#fffff8]/70" : "text-[#888]"}`}>{looseCount}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelected(null);
+                canvas.current?.fit();
+              }}
+              className="flex items-center gap-1.5 rounded-md border-[1.5px] border-[#111] px-2.5 py-1 text-[1.15rem]"
+            >
+              <Maximize size={15} /> Fit
+            </button>
+          </div>
         )}
       </header>
 
       {tagList.length > 0 && (
-        <div className="-mx-4 mb-2 flex gap-1.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] min-[731px]:mx-0 min-[731px]:px-0" role="group" aria-label="Themes">
+        <div
+          className="-mx-4 mb-2 flex gap-1.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] min-[731px]:mx-0 min-[731px]:px-0"
+          role="group"
+          aria-label="Themes"
+        >
           {[{ tag: null, count: notes.length, colour: UNTAGGED }, ...tagList].map((t) => {
             const on = theme === t.tag;
             return (
@@ -185,13 +225,31 @@ export default function NotesMap({
               theme={theme}
               halos={halos}
               onLink={onLink ? link : undefined}
-              onLongPress={onCreate ? (x, y) => setDraft({ x, y, title: "" }) : undefined}
+              onLongPress={
+                onCreate
+                  ? (x, y) => {
+                      setLoose(false);
+                      setDraft({ x, y, title: "" });
+                    }
+                  : undefined
+              }
             />
           )}
-          {node && (
+          {loose && (
+            <LooseEnds
+              graph={graph}
+              onFocus={(id) => {
+                setLoose(false);
+                setSelected(id);
+              }}
+              onLink={onLink ? link : undefined}
+              onClose={() => setLoose(false)}
+            />
+          )}
+          {node && !loose && (
             <PeekCard ref={card} node={node} notes={notes} neighbours={neighbours} onHop={hop} onClose={() => setSelected(null)} />
           )}
-          {!node && !draft && (
+          {!node && !draft && !loose && (
             <p className="pointer-events-none absolute inset-x-0 bottom-2 text-center font-mono text-[10.5px] text-[#999]">
               {selected ? "" : "Tap a dot · hold empty space to add · pinch to zoom"}
             </p>
@@ -202,7 +260,10 @@ export default function NotesMap({
             </p>
           )}
           {toast && (
-            <div role="status" className="absolute inset-x-2 top-2 z-20 flex items-center gap-3 rounded-lg bg-[#111] px-3 py-2 text-[1.15rem] text-[#fffff8]">
+            <div
+              role="status"
+              className="absolute inset-x-2 top-2 z-20 flex items-center gap-3 rounded-lg bg-[#111] px-3 py-2 text-[1.15rem] text-[#fffff8]"
+            >
               <span className="min-w-0 flex-1 truncate">{toast.text}</span>
               {toast.undo && (
                 <button
@@ -242,11 +303,19 @@ export default function NotesMap({
                 className="mt-1 w-full border-b-[1.5px] border-[#111] bg-transparent py-1 text-[1.6rem] outline-none"
               />
               <div className="mt-3 flex gap-2">
-                <button type="button" onClick={() => setDraft(null)} className="rounded-md border-[1.5px] border-[#111]/40 px-3 py-1 text-[1.15rem]">
+                <button
+                  type="button"
+                  onClick={() => setDraft(null)}
+                  className="rounded-md border-[1.5px] border-[#111]/40 px-3 py-1 text-[1.15rem]"
+                >
                   Cancel
                 </button>
                 <span className="flex-1" />
-                <button type="submit" disabled={!draft.title.trim()} className="rounded-md border-[1.5px] border-[#111] px-3 py-1 text-[1.15rem] disabled:opacity-40">
+                <button
+                  type="submit"
+                  disabled={!draft.title.trim()}
+                  className="rounded-md border-[1.5px] border-[#111] px-3 py-1 text-[1.15rem] disabled:opacity-40"
+                >
                   Add to map
                 </button>
                 <button

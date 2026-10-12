@@ -1,5 +1,5 @@
 // The Map: notes as dots, links as lines, laid out by a small force simulation.
-import { findNote, noteLinks, slugify, type Note } from "@/lib/notes";
+import { docText, findNote, noteLinks, slugify, type Note } from "@/lib/notes";
 
 export type MapNode = {
   id: string;
@@ -165,4 +165,76 @@ export function hull(points: { x: number; y: number }[]) {
     upper.push(q);
   }
   return [...lower.slice(0, -1), ...upper.slice(0, -1)];
+}
+
+// ---- Loose ends: notes that might belong together but aren't linked yet ----
+const STOP = new Set(
+  "about above after again against all also although always among and another any are around because been before being below between both but can could does doing down during each even every first from further going have having here into itself just like made make many more most much must never next only other over really same should since some such than that their them then there these they thing things think this those through very want were what when where which while will with within without would your yours just still into onto upon".split(" "),
+);
+const words = (text: string) =>
+  (text.toLowerCase().match(/[a-z][a-z'-]{3,}/g) ?? []).map((w) => w.replace(/'s$/, "")).filter((w) => !STOP.has(w));
+
+export type Suggestion = { a: string; b: string; score: number; why: string };
+
+/** Pairs of written notes that aren't linked but share tags, words or neighbours */
+export function suggestPairs(graph: Graph, max = 8): Suggestion[] {
+  const written = graph.nodes.filter((n) => n.note);
+  const linked = new Set(graph.edges.map((e) => [e.a, e.b].sort().join("\n")));
+  // Word weights: rare words across your notes count more (tf-idf)
+  const bags = new Map<string, Map<string, number>>();
+  const df = new Map<string, number>();
+  for (const n of written) {
+    const note = n.note!;
+    const text = `${note.title} ${note.title} ${note.doc ? docText(note.doc) : note.body}`;
+    const bag = new Map<string, number>();
+    for (const w of words(text)) bag.set(w, (bag.get(w) ?? 0) + 1);
+    bags.set(n.id, bag);
+    for (const w of bag.keys()) df.set(w, (df.get(w) ?? 0) + 1);
+  }
+  const vec = new Map<string, Map<string, number>>();
+  for (const [id, bag] of bags) {
+    const v = new Map<string, number>();
+    let norm = 0;
+    for (const [w, tf] of bag) {
+      const x = (1 + Math.log(tf)) * Math.log(1 + written.length / df.get(w)!);
+      v.set(w, x);
+      norm += x * x;
+    }
+    norm = Math.sqrt(norm) || 1;
+    for (const [w, x] of v) v.set(w, x / norm);
+    vec.set(id, v);
+  }
+  const out: Suggestion[] = [];
+  for (let i = 0; i < written.length; i++) {
+    for (let j = i + 1; j < written.length; j++) {
+      const a = written[i];
+      const b = written[j];
+      if (linked.has([a.id, b.id].sort().join("\n"))) continue;
+      const tags = a.note!.tags.filter((t) => b.note!.tags.includes(t));
+      const va = vec.get(a.id)!;
+      const vb = vec.get(b.id)!;
+      let cos = 0;
+      const shared: [string, number][] = [];
+      for (const [w, x] of va) {
+        const y = vb.get(w);
+        if (y && df.get(w)! < written.length) {
+          cos += x * y;
+          shared.push([w, x * y]);
+        }
+      }
+      const na = neighboursOf(graph, a.id);
+      const common = [...neighboursOf(graph, b.id)].filter((id) => na.has(id));
+      const score = tags.length * 0.6 + cos + common.length * 0.35;
+      if (score < 0.45) continue;
+      const commonTitle = common.length ? graph.nodes.find((n) => n.id === common[0])?.title : "";
+      const topWords = shared.sort((x, y) => y[1] - x[1]).slice(0, 2).map(([w]) => `“${w}”`);
+      const why = [
+        tags.length ? `both #${tags.join(" #")}` : "",
+        commonTitle ? `both link to ${commonTitle}` : "",
+        topWords.length ? `both mention ${topWords.join(" and ")}` : "",
+      ].filter(Boolean);
+      out.push({ a: a.id, b: b.id, score, why: why.slice(0, 2).join(" · ") });
+    }
+  }
+  return out.sort((x, y) => y.score - x.score).slice(0, max);
 }
