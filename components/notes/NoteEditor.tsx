@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Trash2 } from "lucide-react";
 import { inputCls } from "@/components/editor/fields";
@@ -41,27 +41,37 @@ export default function NoteEditor({
     latest.current = { note, tagText };
   }, [note, tagText]);
 
+  // Counts every change, so a save only counts as "done" if nothing was typed while it ran
+  const version = useRef(0);
   const edit = (patch: Partial<Note>) => {
+    version.current++;
     setNote((n) => ({ ...n, ...patch }));
     setDirty(true);
     setStatus({ type: "idle" });
   };
 
+  const again = useRef<() => void>(() => {});
   const save = useCallback(async () => {
     const { note: n, tagText: t } = latest.current;
     if (!n.title.trim()) return setStatus({ type: "error", message: "Add a title to save" });
+    const v = version.current;
     setStatus({ type: "saving" });
     const next = { ...n, title: n.title.trim(), tags: parseTags(t), updated: new Date().toISOString() };
     try {
       await onSave(next, savedTitle.current);
       savedTitle.current = next.title;
-      setNote(next);
-      setDirty(false);
-      setStatus({ type: "saved" });
+      // Never put an older copy back on screen: what you typed meanwhile stays, and gets saved next
+      if (version.current === v) {
+        setDirty(false);
+        setStatus({ type: "saved" });
+      } else setTimeout(() => again.current(), 300);
     } catch (e) {
       setStatus({ type: "error", message: `Couldn't save (${(e as { message?: string })?.message ?? String(e)}).` });
     }
   }, [onSave]);
+  useEffect(() => {
+    again.current = save;
+  }, [save]);
 
   // Autosave: shortly after the last change…
   useEffect(() => {
@@ -75,12 +85,20 @@ export default function NoteEditor({
   useEffect(() => {
     pending.current = { dirty, save };
   }, [dirty, save]);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    // The app going to the background (or being closed) saves straight away
+    const flush = () => {
+      if (document.visibilityState === "hidden" && pending.current.dirty) pending.current.save();
+    };
+    const leave = () => pending.current.dirty && pending.current.save();
+    document.addEventListener("visibilitychange", flush);
+    window.addEventListener("pagehide", leave);
+    return () => {
+      document.removeEventListener("visibilitychange", flush);
+      window.removeEventListener("pagehide", leave);
       if (pending.current.dirty) pending.current.save();
-    },
-    [],
-  );
+    };
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -93,7 +111,7 @@ export default function NoteEditor({
     return () => window.removeEventListener("keydown", onKey);
   }, [save]);
 
-  const others = notes.filter((n) => n.id !== note.id).map((n) => n.title);
+  const others = useMemo(() => notes.filter((n) => n.id !== initial.id).map((n) => n.title), [notes, initial.id]);
 
   return (
     <div className="min-h-screen">
@@ -137,6 +155,7 @@ export default function NoteEditor({
           value={tagText}
           placeholder="Tags, separated by commas: ai, politics, me"
           onChange={(e) => {
+            version.current++;
             setTagText(e.target.value);
             setDirty(true);
           }}

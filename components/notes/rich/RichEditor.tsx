@@ -27,6 +27,7 @@ function Tool({ on, label, icon, children, onClick }: { on?: boolean; label: str
       aria-pressed={on}
       title={label}
       onMouseDown={(e) => e.preventDefault()}
+      onPointerDown={(e) => e.preventDefault()}
       onClick={onClick}
       className={`flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 font-mono text-[12px] whitespace-nowrap ${on ? "bg-[#111] text-[#fffff8]" : "text-[#222] hover:bg-[#111]/[0.06]"}`}
     >
