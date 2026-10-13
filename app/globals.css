@@ -810,3 +810,47 @@ h3 {
   outline: 3px solid #31566f;
   outline-offset: 4px;
 }
+.bd-topbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 48px;
+  padding: 0 6px;
+  border-bottom: 1.5px solid #111;
+  background: #fffff8;
+  position: relative;
+  z-index: 10;
+}
+.bd-menu {
+  position: absolute;
+  right: 0;
+  top: 40px;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border: 1.5px solid #111;
+  border-radius: 12px;
+  background: #fffff8;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+.bd-menu button {
+  padding: 9px 12px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 1.25rem;
+}
+.bd-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border: 1.5px solid #111;
+  border-radius: 10px;
+  background-color: #fffff8;
+  background-image: radial-gradient(circle, #e2dfd2 1px, transparent 1.2px);
+  background-size: 12px 12px;
+}
+.bd-thumb-empty {
+  border-style: dashed;
+  border-color: #a9a69a;
+}

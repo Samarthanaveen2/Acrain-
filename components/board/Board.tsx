@@ -53,9 +53,10 @@ const CAM_KEY = "acrain-board-cam";
 const clampK = (k: number) => Math.min(MAX_K, Math.max(MIN_K, k));
 const DEFAULT = { box: { w: 168, h: 64 }, sticky: { w: 170, h: 150 }, text: { w: 220, h: 30 } };
 
-function loadCam(): Cam | null {
+function loadCam(key: string): Cam | null {
   try {
-    const c = JSON.parse(localStorage.getItem(CAM_KEY) ?? "null");
+    // The first canvas keeps where you were looking on the old single board
+    const c = JSON.parse(localStorage.getItem(`${CAM_KEY}:${key}`) ?? (key === "first" ? localStorage.getItem(CAM_KEY) : null) ?? "null");
     return c && typeof c.k === "number" ? c : null;
   } catch {
     return null;
@@ -64,12 +65,15 @@ function loadCam(): Cam | null {
 
 /** The Playground: an endless board. Tools on the right edge; two fingers move around. */
 export default function Board({
+  camKey = "main",
   board,
   noteTitles,
   onSave,
   onOpenNote,
   focus,
 }: {
+  /** Each canvas remembers its own camera */
+  camKey?: string;
   board: BoardData | null;
   /** Your notes, for linking boxes to them */
   noteTitles: string[];
@@ -80,7 +84,7 @@ export default function Board({
 }) {
   const view = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
-  const [cam, setCamState] = useState<Cam>(() => loadCam() ?? { x: 40, y: 80, k: 1 });
+  const [cam, setCamState] = useState<Cam>(() => loadCam(camKey) ?? { x: 40, y: 80, k: 1 });
   const camRef = useRef(cam);
   const setCam = useCallback((c: Cam) => {
     camRef.current = c;
@@ -89,13 +93,13 @@ export default function Board({
   useEffect(() => {
     const t = setTimeout(() => {
       try {
-        localStorage.setItem(CAM_KEY, JSON.stringify(cam));
+        localStorage.setItem(`${CAM_KEY}:${camKey}`, JSON.stringify(cam));
       } catch {
         // private mode: the camera just won't be remembered
       }
     }, 300);
     return () => clearTimeout(t);
-  }, [cam]);
+  }, [cam, camKey]);
 
   const [shapes, setShapes] = useState<Shape[] | null>(board ? board.shapes : null);
   const [hist, setHist] = useState<History>({ past: [], future: [] });

@@ -5,15 +5,16 @@ import ComingSoon from "@/components/ComingSoon";
 import NotesHome from "@/components/notes/NotesHome";
 import NoteView from "@/components/notes/NoteView";
 import NoteEditor from "@/components/notes/NoteEditor";
-import Board from "@/components/board/Board";
+import CanvasList from "@/components/board/CanvasList";
+import CanvasScreen from "@/components/board/CanvasScreen";
 import { findNote, freeId, type Note } from "@/lib/notes";
-import { boxesForNote, type Board as BoardData } from "@/lib/board";
+import { boxesForNoteEverywhere, canvasTitle, newCanvas, type Canvas } from "@/lib/board";
 import { NotesContext } from "@/components/notes/rich/context";
 import { createNote, deleteNote, saveNote, subscribeNotes } from "./notes-store";
 import { back, navigate, usePath } from "./router";
 import TabBar from "./TabBar";
 import Settings from "./Settings";
-import { saveBoard, subscribeBoard } from "./board-store";
+import { deleteCanvas, saveCanvas, subscribeCanvases } from "./canvas-store";
 
 type Status = "loading" | "offline" | "ready";
 const wrap = "mx-auto max-w-[1166px] px-4 pb-24 min-[731px]:px-8";
@@ -35,18 +36,19 @@ function useNotes() {
   return state;
 }
 
-function useBoard() {
-  const [board, setBoard] = useState<BoardData | null>(null);
+type Canvases = { status: "loading" | "ready"; canvases: Canvas[] };
+function useCanvases() {
+  const [state, setState] = useState<Canvases>({ status: "loading", canvases: [] });
   useEffect(() => {
     let stop: (() => void) | undefined;
     let alive = true;
-    subscribeBoard((b) => alive && setBoard(b)).then((s) => (alive ? (stop = s) : s()));
+    subscribeCanvases((canvases) => alive && setState({ status: "ready", canvases })).then((s) => (alive ? (stop = s) : s()));
     return () => {
       alive = false;
       stop?.();
     };
   }, []);
-  return board;
+  return state;
 }
 
 /** Creates a note (from a [[link]] or the New note button) and opens it for writing */
@@ -107,12 +109,12 @@ function NewNote({ notes, initialTitle }: { notes: Note[]; initialTitle: string 
   );
 }
 
-function Screen({ path, status, notes, board }: { path: string; status: Status; notes: Note[]; board: BoardData | null }) {
+function Screen({ path, status, notes, canvases }: { path: string; status: Status; notes: Note[]; canvases: Canvases }) {
   const [route, query = ""] = path.split("?");
   const m = route.match(/^\/notes\/([^/]+)(\/edit)?$/);
-  const restore = async (list: Note[], restored: BoardData | null) => {
+  const restore = async (list: Note[], restored: Canvas[]) => {
     for (const n of list) await createNote(n);
-    if (restored) await saveBoard(restored);
+    for (const c of restored) await saveCanvas(c);
   };
   const openNote = (title: string) => {
     const hit = findNote(notes, title);
@@ -126,11 +128,43 @@ function Screen({ path, status, notes, board }: { path: string; status: Status; 
   }
   if (route === "/board")
     return (
-      <div className="bd-screen">
-        <Board key={query} board={board} noteTitles={notes.map((n) => n.title).sort((a, b) => a.localeCompare(b))} onSave={saveBoard} onOpenNote={openNote} focus={new URLSearchParams(query).get("focus")} />
-      </div>
+      <CanvasList
+        canvases={canvases.canvases}
+        notes={notes}
+        status={canvases.status}
+        onCreate={async (title) => {
+          const c = newCanvas(title, canvases.canvases);
+          await saveCanvas(c);
+          navigate(`/board/${c.id}`);
+        }}
+      />
     );
-  if (route === "/settings") return <Settings notes={notes} board={board} onRestore={restore} />;
+  const cm = route.match(/^\/board\/([^/]+)$/);
+  if (cm) {
+    const c = canvases.canvases.find((x) => x.id === cm[1]);
+    if (!c)
+      return <p className={`${wrap} pt-10 font-mono text-[13px] text-[#777]`}>{canvases.status === "loading" ? "Loading…" : "Canvas not found."}</p>;
+    const note = c.note ? notes.find((n) => n.id === c.note) : undefined;
+    return (
+      <CanvasScreen
+        key={`${c.id}:${query}`}
+        canvas={c}
+        title={canvasTitle(c, notes)}
+        inNote={note?.title}
+        noteTitles={notes.map((n) => n.title).sort((a, b) => a.localeCompare(b))}
+        focus={new URLSearchParams(query).get("focus")}
+        onSave={(shapes) => saveCanvas({ ...c, shapes })}
+        onRename={(title) => saveCanvas({ ...c, title })}
+        onDelete={async () => {
+          await deleteCanvas(c.id);
+          back();
+        }}
+        onBack={back}
+        onOpenNote={openNote}
+      />
+    );
+  }
+  if (route === "/settings") return <Settings notes={notes} canvases={canvases.canvases} onRestore={restore} />;
   if (route === "/about")
     return (
       <ComingSoon title="About">
@@ -162,9 +196,9 @@ function Screen({ path, status, notes, board }: { path: string; status: Status; 
             note={note}
             notes={notes}
             onBack={back}
-            onBoard={boxesForNote(board?.shapes ?? [], note.title).map((b) => ({
-              href: `/board?focus=${b.id}`,
-              label: b.text.trim() || "A box",
+            onBoard={boxesForNoteEverywhere(canvases.canvases, note.title).map(({ canvas, box }) => ({
+              href: `/board/${canvas.id}?focus=${box.id}`,
+              label: `${box.text.trim() || "A box"} · ${canvasTitle(canvas, notes)}`,
             }))}
           />
         )}
@@ -178,13 +212,13 @@ function Screen({ path, status, notes, board }: { path: string; status: Status; 
 function App() {
   const path = usePath();
   const { status, notes } = useNotes();
-  const board = useBoard();
+  const canvases = useCanvases();
   // The editor gets the whole screen (and the keyboard); everywhere else shows the tabs
   const editing = /\/edit$/.test(path.split("?")[0]);
   return (
     <>
       <div className={editing ? "" : "pb-tabbar"}>
-        <Screen path={path} status={status} notes={notes} board={board} />
+        <Screen path={path} status={status} notes={notes} canvases={canvases} />
       </div>
       {!editing && <TabBar path={path} />}
     </>

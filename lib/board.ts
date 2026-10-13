@@ -195,6 +195,33 @@ export function boxesForNote(shapes: Shape[], title: string) {
   return shapes.filter((s): s is BoxShape => s.type === "box" && s.note?.trim().toLowerCase() === t);
 }
 
+// ---- Canvases: many boards, one per topic (some belong to a note) ----
+export type Canvas = { id: string; title: string; /** id of the note it belongs to */ note?: string; shapes: Shape[]; created: string; updated: string };
+
+export function newCanvas(title: string, existing: Canvas[], note?: string): Canvas {
+  const base =
+    title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40) || "canvas";
+  let id = base;
+  for (let i = 2; existing.some((c) => c.id === id); i++) id = `${base}-${i}`;
+  const now = new Date().toISOString();
+  return { id, title: title.trim() || "Untitled canvas", ...(note ? { note } : {}), shapes: [], created: now, updated: now };
+}
+
+/** A note's canvas is called whatever the note is called now */
+export function canvasTitle(c: Canvas, notes: { id: string; title: string }[]) {
+  const n = c.note ? notes.find((x) => x.id === c.note) : undefined;
+  return n?.title || c.title;
+}
+
+/** Boxes linked to a note, on every canvas */
+export function boxesForNoteEverywhere(canvases: Canvas[], title: string) {
+  return canvases.flatMap((canvas) => boxesForNote(canvas.shapes, title).map((box) => ({ canvas, box })));
+}
+
 /** Every box stacked flush under this one (or on top of it), nearest first */
 export function stackChain(shapes: Shape[], id: string, dir: "below" | "above"): BoxShape[] {
   const out: BoxShape[] = [];
