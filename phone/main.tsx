@@ -186,6 +186,8 @@ function Screen({ path, status, notes, canvases }: { path: string; status: Statu
             onBack={back}
             onDone={() => navigate(`/notes/${note.id}`, { replace: true })}
             onDelete={async (n) => {
+              // The note's canvas stays, as a normal canvas with the note's name
+              for (const c of canvases.canvases.filter((x) => x.note === n.id)) await saveCanvas({ ...c, note: undefined, title: n.title || c.title });
               await deleteNote(n.id);
               navigate("/", { root: true });
             }}
@@ -196,6 +198,15 @@ function Screen({ path, status, notes, canvases }: { path: string; status: Statu
             note={note}
             notes={notes}
             onBack={back}
+            canvas={(() => {
+              const c = canvases.canvases.find((x) => x.note === note.id);
+              return c ? { href: `/board/${c.id}`, shapes: c.shapes } : null;
+            })()}
+            onAddCanvas={async () => {
+              const c = newCanvas(note.title, canvases.canvases, note.id);
+              await saveCanvas(c);
+              navigate(`/board/${c.id}`);
+            }}
             onBoard={boxesForNoteEverywhere(canvases.canvases, note.title).map(({ canvas, box }) => ({
               href: `/board/${canvas.id}?focus=${box.id}`,
               label: `${box.text.trim() || "A box"} · ${canvasTitle(canvas, notes)}`,

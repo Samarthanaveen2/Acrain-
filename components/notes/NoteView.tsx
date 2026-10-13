@@ -5,6 +5,8 @@ import { ChevronLeft, PenLine } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
 import { backlinks, findNote, fmtDate, footnotesIn, markdownToHtml, noteLinks, type Note } from "@/lib/notes";
 import RichView from "./rich/RichView";
+import Thumbnail from "@/components/board/Thumbnail";
+import type { Shape } from "@/lib/board";
 
 /** Reading a note: ai-2027 typography, then what it connects to and what connects to it */
 export default function NoteView({
@@ -12,12 +14,18 @@ export default function NoteView({
   notes,
   onBack,
   onBoard = [],
+  canvas,
+  onAddCanvas,
 }: {
   note: Note;
   notes: Note[];
   onBack?: () => void;
   /** Boxes on the Playground linked to this note */
   onBoard?: { href: string; label: string }[];
+  /** This note's own canvas, if it has one */
+  canvas?: { href: string; shapes: Shape[] } | null;
+  /** Make a canvas for this note and open it */
+  onAddCanvas?: () => void;
 }) {
   const linkedFrom = backlinks(notes, note);
   const linksTo = noteLinks(note).map((t) => ({ title: t, note: findNote(notes, t) }));
@@ -55,6 +63,22 @@ export default function NoteView({
               </Link>
             ))}
           </p>
+        )}
+
+        {canvas ? (
+          <Link href={canvas.href} className="note-canvas mt-6 block no-underline" aria-label="Open canvas">
+            <Thumbnail shapes={canvas.shapes} className="bd-thumb-note" />
+            <span className="mt-1.5 flex items-center justify-between font-mono text-[11px] text-[#777]">
+              <span>Canvas · {canvas.shapes.length} {canvas.shapes.length === 1 ? "thing" : "things"}</span>
+              <span className="text-[#111] underline underline-offset-2">Open canvas</span>
+            </span>
+          </Link>
+        ) : (
+          onAddCanvas && (
+            <button type="button" onClick={onAddCanvas} className="note-canvas-add mt-6">
+              ＋ Add a canvas
+            </button>
+          )
         )}
 
         <div className="mt-8">
