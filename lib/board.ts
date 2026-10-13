@@ -150,10 +150,24 @@ export const bringFront = (shapes: Shape[], id: string) => [...shapes.filter((s)
 export const sendBack = (shapes: Shape[], id: string) => [...shapes.filter((s) => s.id === id), ...shapes.filter((s) => s.id !== id)];
 
 /** Removes a shape, and any arrow attached to it */
+/** Removes a shape. Connections attached to it stay, with that end left loose where the shape's edge was. */
 export function remove(shapes: Shape[], id: string): Shape[] {
-  return shapes.filter(
-    (s) => s.id !== id && !(s.type === "arrow" && (("shape" in s.from && s.from.shape === id) || ("shape" in s.to && s.to.shape === id))),
-  );
+  return detachFrom(shapes, id).filter((s) => s.id !== id);
+}
+
+/** Lets go of a shape: any connection end attached to it becomes a loose point in the same place */
+export function detachFrom(shapes: Shape[], id: string): Shape[] {
+  return shapes.map((s) => {
+    if (s.type !== "arrow") return s;
+    const fromHere = "shape" in s.from && s.from.shape === id;
+    const toHere = "shape" in s.to && s.to.shape === id;
+    if (!fromHere && !toHere) return s;
+    return {
+      ...s,
+      from: fromHere ? endPoint(s.from, s.to, shapes) : s.from,
+      to: toHere ? endPoint(s.to, s.from, shapes) : s.to,
+    };
+  });
 }
 
 export function patch(shapes: Shape[], id: string, p: Partial<Shape>): Shape[] {
