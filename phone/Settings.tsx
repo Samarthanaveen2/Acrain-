@@ -5,19 +5,19 @@ import { Share } from "@capacitor/share";
 import { Download, Upload } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
 import type { Note } from "@/lib/notes";
-import type { Stack } from "@/lib/stacks";
+import type { Board } from "@/lib/board";
 
 declare const __APP_VERSION__: string;
 
 /** Settings: a backup file you can keep in Files or iCloud, and restoring from one */
 export default function Settings({
   notes,
-  stacks,
+  board,
   onRestore,
 }: {
   notes: Note[];
-  stacks: Stack[];
-  onRestore: (notes: Note[], stacks: Stack[]) => Promise<void>;
+  board: Board | null;
+  onRestore: (notes: Note[], board: Board | null) => Promise<void>;
 }) {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -28,7 +28,7 @@ export default function Settings({
     setMsg("");
     const day = new Date().toISOString().slice(0, 10);
     const name = `Acrain backup ${day}.json`;
-    const json = JSON.stringify({ acrain: 1, exported: new Date().toISOString(), notes, stacks }, null, 1);
+    const json = JSON.stringify({ acrain: 1, exported: new Date().toISOString(), notes, board: board ?? { shapes: [] } }, null, 1);
     try {
       if (Capacitor.isNativePlatform()) {
         const { uri } = await Filesystem.writeFile({ path: name, data: json, directory: Directory.Cache, encoding: Encoding.UTF8 });
@@ -56,12 +56,10 @@ export default function Settings({
       const list: Note[] = (Array.isArray(parsed) ? parsed : (parsed.notes ?? [])).filter(
         (n: Note) => n?.id && typeof n.title === "string",
       );
-      const stackList: Stack[] = (Array.isArray(parsed?.stacks) ? parsed.stacks : []).filter(
-        (s: Stack) => s?.id && typeof s.title === "string" && Array.isArray(s.layers),
-      );
-      if (!list.length && !stackList.length) throw new Error("no notes in that file");
-      await onRestore(list, stackList);
-      const parts = [`${list.length} ${list.length === 1 ? "note" : "notes"}`, stackList.length ? `${stackList.length} ${stackList.length === 1 ? "stack" : "stacks"}` : ""];
+      const restoredBoard: Board | null = Array.isArray(parsed?.board?.shapes) && parsed.board.shapes.length ? parsed.board : null;
+      if (!list.length && !restoredBoard) throw new Error("no notes in that file");
+      await onRestore(list, restoredBoard);
+      const parts = [`${list.length} ${list.length === 1 ? "note" : "notes"}`, restoredBoard ? "the Playground" : ""];
       setMsg(`Restored ${parts.filter(Boolean).join(" and ")}. Ones with the same name were replaced; the rest were kept.`);
     } catch (e) {
       setMsg(`Couldn't restore (${(e as { message?: string })?.message ?? String(e)}). Pick an Acrain backup file.`);
@@ -75,12 +73,11 @@ export default function Settings({
 
       <h2 className="font-mono text-[11px] tracking-wide text-[#777] uppercase">Your notes</h2>
       <p className="mt-1 text-[1.15rem] leading-snug text-[#555]">
-        {notes.length} {notes.length === 1 ? "note" : "notes"} and {stacks.length} {stacks.length === 1 ? "stack" : "stacks"}, saved on this
-        phone. Keep a backup somewhere safe in case the
+        {notes.length} {notes.length === 1 ? "note" : "notes"} and your Playground, saved on this phone. Keep a backup somewhere safe in case the
         app is ever deleted.
       </p>
       <div className="mt-3 border-t border-[#666]/20">
-        <button type="button" className={row} onClick={backUp} disabled={busy || (!notes.length && !stacks.length)}>
+        <button type="button" className={row} onClick={backUp} disabled={busy || (!notes.length && !board?.shapes.length)}>
           <Download size={20} /> Back up to Files
         </button>
         <button type="button" className={row} onClick={() => file.current?.click()}>

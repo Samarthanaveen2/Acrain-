@@ -1,9 +1,9 @@
-import { Layers, NotebookPen, Plus, Settings } from "lucide-react";
+import { NotebookPen, Plus, Settings, Shapes } from "lucide-react";
 import { navigate } from "./router";
 
 const tabs = [
   { path: "/", label: "Notes", icon: NotebookPen },
-  { path: "/stacks", label: "Stacks", icon: Layers },
+  { path: "/board", label: "Playground", icon: Shapes },
   { path: "/new-note", label: "New", icon: Plus, primary: true },
   { path: "/settings", label: "Settings", icon: Settings },
 ];

@@ -11,13 +11,13 @@ export default function NoteView({
   note,
   notes,
   onBack,
-  inStacks = [],
+  onBoard = [],
 }: {
   note: Note;
   notes: Note[];
   onBack?: () => void;
-  /** Stack layers that point at this note */
-  inStacks?: { href: string; stack: string; layer: string }[];
+  /** Boxes on the Playground linked to this note */
+  onBoard?: { href: string; label: string }[];
 }) {
   const linkedFrom = backlinks(notes, note);
   const linksTo = noteLinks(note).map((t) => ({ title: t, note: findNote(notes, t) }));
@@ -111,16 +111,15 @@ export default function NoteView({
           </section>
         )}
 
-        {inStacks.length > 0 && (
+        {onBoard.length > 0 && (
           <section className="mt-12 border-t border-[#666]/30 pt-6">
-            <h2 className="text-[1.5rem]">In stacks</h2>
+            <h2 className="text-[1.5rem]">On the board</h2>
             <ul className="mt-2 grid gap-1.5">
-              {inStacks.map((s) => (
-                <li key={s.href}>
-                  <Link href={s.href} className="text-[1.25rem] text-[var(--path-b)] underline decoration-1 underline-offset-2">
-                    {s.stack}
+              {onBoard.map((b) => (
+                <li key={b.href}>
+                  <Link href={b.href} className="text-[1.25rem] text-[var(--path-b)] underline decoration-1 underline-offset-2">
+                    {b.label}
                   </Link>
-                  {s.layer && <span className="ml-1.5 font-mono text-[11px] text-[#888]">as {s.layer}</span>}
                 </li>
               ))}
             </ul>
