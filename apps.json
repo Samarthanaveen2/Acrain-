@@ -1,0 +1,199 @@
+{
+  "name": "Acrain",
+  "identifier": "com.samartha.acrain.source",
+  "subtitle": "My thinking about the world, linked.",
+  "iconURL": "https://raw.githubusercontent.com/Samarthanaveen2/Acrain-/sidestore/icon.png",
+  "website": "https://github.com/Samarthanaveen2/Acrain-",
+  "tintColor": "#2a623d",
+  "apps": [
+    {
+      "name": "Acrain",
+      "bundleIdentifier": "com.samartha.acrain",
+      "developerName": "Samartha",
+      "subtitle": "Notes on ideas, and the connections between them.",
+      "localizedDescription": "Write notes about the world in ai-2027's style, link ideas together, and see them on a map and a timeline. Notes are saved on your phone.",
+      "iconURL": "https://raw.githubusercontent.com/Samarthanaveen2/Acrain-/sidestore/icon.png",
+      "tintColor": "#2a623d",
+      "category": "productivity",
+      "screenshots": [],
+      "versions": [
+        {
+          "version": "1.0.19",
+          "buildVersion": "19",
+          "date": "2026-10-13T12:21:36Z",
+          "localizedDescription": "Acrain 1.0.19",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-19/Acrain.ipa",
+          "size": 872735,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.18",
+          "buildVersion": "18",
+          "date": "2026-10-13T10:45:07Z",
+          "localizedDescription": "Acrain 1.0.18",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-18/Acrain.ipa",
+          "size": 871677,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.17",
+          "buildVersion": "17",
+          "date": "2026-10-13T10:40:47Z",
+          "localizedDescription": "Acrain 1.0.17",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-17/Acrain.ipa",
+          "size": 871467,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.16",
+          "buildVersion": "16",
+          "date": "2026-10-13T10:24:23Z",
+          "localizedDescription": "Acrain 1.0.16",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-16/Acrain.ipa",
+          "size": 868877,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.15",
+          "buildVersion": "15",
+          "date": "2026-10-13T10:22:13Z",
+          "localizedDescription": "Acrain 1.0.15",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-15/Acrain.ipa",
+          "size": 868831,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.14",
+          "buildVersion": "14",
+          "date": "2026-10-13T07:20:00Z",
+          "localizedDescription": "Acrain 1.0.14",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-14/Acrain.ipa",
+          "size": 868264,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.13",
+          "buildVersion": "13",
+          "date": "2026-10-13T07:14:54Z",
+          "localizedDescription": "Acrain 1.0.13",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-13/Acrain.ipa",
+          "size": 867225,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.12",
+          "buildVersion": "12",
+          "date": "2026-10-13T07:10:40Z",
+          "localizedDescription": "Acrain 1.0.12",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-12/Acrain.ipa",
+          "size": 862526,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.11",
+          "buildVersion": "11",
+          "date": "2026-10-13T06:59:39Z",
+          "localizedDescription": "Acrain 1.0.11",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-11/Acrain.ipa",
+          "size": 862352,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.10",
+          "buildVersion": "10",
+          "date": "2026-10-13T06:57:39Z",
+          "localizedDescription": "Acrain 1.0.10",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-10/Acrain.ipa",
+          "size": 860589,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.9",
+          "buildVersion": "9",
+          "date": "2026-10-13T06:48:42Z",
+          "localizedDescription": "Acrain 1.0.9",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-9/Acrain.ipa",
+          "size": 860581,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.8",
+          "buildVersion": "8",
+          "date": "2026-10-13T06:09:58Z",
+          "localizedDescription": "Acrain 1.0.8",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-8/Acrain.ipa",
+          "size": 1011840,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.7",
+          "buildVersion": "7",
+          "date": "2026-10-12T20:41:01Z",
+          "localizedDescription": "Acrain 1.0.7",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-7/Acrain.ipa",
+          "size": 863918,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.6",
+          "buildVersion": "6",
+          "date": "2026-10-12T20:39:04Z",
+          "localizedDescription": "Acrain 1.0.6",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-6/Acrain.ipa",
+          "size": 861959,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.5",
+          "buildVersion": "5",
+          "date": "2026-10-12T20:34:02Z",
+          "localizedDescription": "Acrain 1.0.5",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-5/Acrain.ipa",
+          "size": 860284,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.4",
+          "buildVersion": "4",
+          "date": "2026-10-12T18:16:47Z",
+          "localizedDescription": "Acrain 1.0.4",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-4/Acrain.ipa",
+          "size": 858995,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.3",
+          "buildVersion": "3",
+          "date": "2026-10-12T17:58:49Z",
+          "localizedDescription": "Acrain 1.0.3",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-3/Acrain.ipa",
+          "size": 855669,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.2",
+          "buildVersion": "2",
+          "date": "2026-10-12T17:52:11Z",
+          "localizedDescription": "Acrain 1.0.2",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-2/Acrain.ipa",
+          "size": 855668,
+          "minOSVersion": "15.0"
+        },
+        {
+          "version": "1.0.1",
+          "buildVersion": "1",
+          "date": "2026-10-12T17:46:41Z",
+          "localizedDescription": "Acrain 1.0.1",
+          "downloadURL": "https://github.com/Samarthanaveen2/Acrain-/releases/download/app-1/Acrain.ipa",
+          "size": 789379,
+          "minOSVersion": "15.0"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {}
+      }
+    }
+  ],
+  "news": []
+}
