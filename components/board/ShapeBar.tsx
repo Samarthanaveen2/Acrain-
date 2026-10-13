@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDownToLine, BringToFront, Copy, PenLine, SendToBack, Trash2 } from "lucide-react";
+import { ArrowDownToLine, BringToFront, Copy, NotebookPen, PenLine, SendToBack, Trash2 } from "lucide-react";
 import { COLOURS, PAINT, STICKY, type Colour, type Shape } from "@/lib/board";
 
 /** Small floating bar above whatever is selected */
@@ -17,6 +17,7 @@ export default function ShapeBar({
   onFront,
   onBack,
   onDelete,
+  onNote,
 }: {
   shape: Shape;
   /** Screen position (centre x, top y) */
@@ -30,6 +31,8 @@ export default function ShapeBar({
   onFront: () => void;
   onBack: () => void;
   onDelete: () => void;
+  /** Link this box to a note */
+  onNote: () => void;
 }) {
   const [colours, setColours] = useState(false);
   const stop = (e: React.PointerEvent) => e.stopPropagation();
@@ -79,6 +82,11 @@ export default function ShapeBar({
           {shape.type === "box" && (
             <button type="button" aria-label="Add a slab under" onClick={onUnder} className="bd-btn">
               <ArrowDownToLine size={17} />
+            </button>
+          )}
+          {shape.type === "box" && (
+            <button type="button" aria-label={shape.note ? "Linked note" : "Link note"} onClick={onNote} className={`bd-btn ${shape.note ? "bd-btn-on" : ""}`}>
+              <NotebookPen size={17} />
             </button>
           )}
           {shape.type !== "ink" && (

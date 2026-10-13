@@ -26,6 +26,7 @@ import {
   type Shape,
 } from "@/lib/board";
 import { ArrowLabels, Draft, LinesLayer } from "./Lines";
+import NotePicker from "./NotePicker";
 import ShapeBar from "./ShapeBar";
 import Shapes, { type Corner } from "./Shapes";
 import ToolRail, { INK_SIZES, type MakeTool, type Tool } from "./ToolRail";
@@ -62,11 +63,14 @@ function loadCam(): Cam | null {
 /** The Playground: an endless board. Tools on the right edge; two fingers move around. */
 export default function Board({
   board,
+  noteTitles,
   onSave,
   onOpenNote,
   focus,
 }: {
   board: BoardData | null;
+  /** Your notes, for linking boxes to them */
+  noteTitles: string[];
   onSave: (b: BoardData) => void;
   onOpenNote: (title: string) => void;
   /** A shape to fly to (from a note) */
@@ -101,6 +105,7 @@ export default function Board({
   const [ink, setInk] = useState({ colour: "#111", size: INK_SIZES[0] });
   const [inkDraft, setInkDraft] = useState<{ points: [number, number, number][]; pen: boolean } | null>(null);
   const [arrowDraft, setArrowDraft] = useState<{ a: P; b: P } | null>(null);
+  const [linking, setLinking] = useState<string | null>(null);
 
   // The board arrives from storage once; after that, this screen owns it
   useEffect(() => {
@@ -406,7 +411,10 @@ export default function Board({
       return;
     }
     if (o.kind === "ink") {
-      commit([...o.before, { id: newId(), type: "ink", points: o.points, colour: ink.colour, size: ink.size, pen: o.pen }], o.before);
+      // Keep the stroke light: drop points that are almost on top of the last one
+      const minGap = 1.2 / camRef.current.k;
+      const pts = o.points.filter((q, i, arr) => i === 0 || i === arr.length - 1 || Math.hypot(q[0] - arr[i - 1][0], q[1] - arr[i - 1][1]) >= minGap);
+      commit([...o.before, { id: newId(), type: "ink", points: pts, colour: ink.colour, size: ink.size, pen: o.pen }], o.before);
       return;
     }
     if (o.kind === "erase") {
@@ -496,6 +504,20 @@ export default function Board({
     setShapes((list) => (list ? patch(list, id, list.find((x) => x.id === id)?.type === "arrow" ? { label: text } : { text }) : list));
 
   const empty = shapes !== null && shapes.length === 0;
+  // A big board only draws what's near the screen
+  const visible =
+    all.length > 150 && size.w
+      ? all.filter((s) => {
+          if (s.id === selected || s.id === editing) return true;
+          const r = bounds(s, all);
+          if (!r) return false;
+          const x0 = -cam.x / cam.k - size.w / cam.k / 2;
+          const y0 = -cam.y / cam.k - size.h / cam.k / 2;
+          const x1 = x0 + (size.w / cam.k) * 2;
+          const y1 = y0 + (size.h / cam.k) * 2;
+          return r.x + r.w >= x0 && r.x <= x1 && r.y + r.h >= y0 && r.y <= y1;
+        })
+      : all;
 
   return (
     <div
@@ -516,7 +538,7 @@ export default function Board({
         {shapes && <ArrowLabels shapes={shapes} editing={editing} onText={setText} onEditEnd={endEdit} />}
         {shapes && (
           <Shapes
-            shapes={shapes}
+            shapes={visible}
             selected={selected}
             editing={editing}
             k={cam.k}
@@ -617,6 +639,23 @@ export default function Board({
             act((s) => remove(s, sel.id));
             setSelected(null);
           }}
+          onNote={() => setLinking(sel.id)}
+        />
+      )}
+
+      {linking && (
+        <NotePicker
+          titles={noteTitles}
+          current={(all.find((x) => x.id === linking) as { note?: string } | undefined)?.note}
+          onPick={(title) => {
+            act((s) => patch(s, linking, { note: title } as Partial<Shape>));
+            setLinking(null);
+          }}
+          onUnlink={() => {
+            act((s) => patch(s, linking, { note: undefined } as Partial<Shape>));
+            setLinking(null);
+          }}
+          onClose={() => setLinking(null)}
         />
       )}
     </div>

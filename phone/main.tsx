@@ -127,7 +127,7 @@ function Screen({ path, status, notes, board }: { path: string; status: Status; 
   if (route === "/board")
     return (
       <div className="bd-screen">
-        <Board key={query} board={board} onSave={saveBoard} onOpenNote={openNote} focus={new URLSearchParams(query).get("focus")} />
+        <Board key={query} board={board} noteTitles={notes.map((n) => n.title).sort((a, b) => a.localeCompare(b))} onSave={saveBoard} onOpenNote={openNote} focus={new URLSearchParams(query).get("focus")} />
       </div>
     );
   if (route === "/settings") return <Settings notes={notes} board={board} onRestore={restore} />;
