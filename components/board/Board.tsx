@@ -19,14 +19,16 @@ import {
   stackChain,
   undo,
   type Board as BoardData,
+  type End,
   type Framed,
   type History,
   type Rect,
   type Shape,
 } from "@/lib/board";
+import { ArrowLabels, Draft, LinesLayer } from "./Lines";
 import ShapeBar from "./ShapeBar";
 import Shapes, { type Corner } from "./Shapes";
-import ToolRail, { type Tool } from "./ToolRail";
+import ToolRail, { INK_SIZES, type MakeTool, type Tool } from "./ToolRail";
 
 type Cam = { x: number; y: number; k: number };
 type P = { x: number; y: number };
@@ -35,7 +37,11 @@ type Op =
   | { kind: "pinch"; dist: number; mid: P; cam: Cam }
   | { kind: "move"; id: string; start: P; orig: Rect; before: Shape[]; moved: boolean }
   | { kind: "resize"; id: string; corner: Corner; start: P; orig: Rect; before: Shape[] }
-  | { kind: "create"; tool: Exclude<Tool, "select">; start: P; startWorld: P; id: string | null; before: Shape[] };
+  | { kind: "create"; tool: MakeTool; start: P; startWorld: P; id: string | null; before: Shape[] }
+  | { kind: "ink"; points: [number, number, number][]; pen: boolean; before: Shape[] }
+  | { kind: "connect"; from: End; a: P; start: P; over: string | null; moved: boolean; before: Shape[] }
+  | { kind: "erase"; before: Shape[]; removed: Set<string> }
+  | { kind: "pick"; id: string; start: P; cam: Cam; moved: boolean };
 
 const TAP = 6;
 const MIN_K = 0.2;
@@ -92,6 +98,9 @@ export default function Board({
   const [editing, setEditing] = useState<string | null>(null);
   const [snapped, setSnapped] = useState<string | null>(null);
   const editBefore = useRef<Shape[] | null>(null);
+  const [ink, setInk] = useState({ colour: "#111", size: INK_SIZES[0] });
+  const [inkDraft, setInkDraft] = useState<{ points: [number, number, number][]; pen: boolean } | null>(null);
+  const [arrowDraft, setArrowDraft] = useState<{ a: P; b: P } | null>(null);
 
   // The board arrives from storage once; after that, this screen owns it
   useEffect(() => {
@@ -205,10 +214,30 @@ export default function Board({
   // While a finger is busy, the selection bar steps aside
   const [busy, setBusy] = useState(false);
 
+  // The eraser removes whatever it touches (ink, arrows, boxes); one undo brings it all back
+  const erase = (cx: number, cy: number) => {
+    const o = op.current;
+    if (o?.kind !== "erase") return;
+    const hits = new Set<string>();
+    for (const [dx, dy] of [[0, 0], [8, 0], [-8, 0], [0, 8], [0, -8]]) {
+      const id = document.elementFromPoint(cx + dx, cy + dy)?.closest("[data-shape]")?.getAttribute("data-shape");
+      if (id && !o.removed.has(id)) hits.add(id);
+    }
+    if (!hits.size) return;
+    hits.forEach((id) => o.removed.add(id));
+    setShapes((list) => {
+      let next = list ?? [];
+      hits.forEach((id) => (next = remove(next, id)));
+      return next;
+    });
+  };
+
   const startPinch = () => {
     const cur = op.current;
     // A second finger cancels whatever the first one was doing
-    if (cur && (cur.kind === "move" || cur.kind === "resize" || cur.kind === "create")) setShapes(cur.before);
+    if (cur && (cur.kind === "move" || cur.kind === "resize" || cur.kind === "create" || cur.kind === "erase")) setShapes(cur.before);
+    setInkDraft(null);
+    setArrowDraft(null);
     const [a, b] = [...pointers.current.values()];
     op.current = { kind: "pinch", dist: Math.hypot(b.x - a.x, b.y - a.y) || 1, mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, cam: camRef.current };
   };
@@ -237,10 +266,32 @@ export default function Board({
         op.current = { kind: "resize", id: shape.id, corner: handle, start: p, orig: bounds(shape)!, before: all };
       } else if (shape && isFramed(shape)) {
         op.current = { kind: "move", id: shape.id, start: p, orig: bounds(shape)!, before: all, moved: false };
-      } else op.current = { kind: "pan", start: p, cam: camRef.current, moved: false };
+      } else if (shape) op.current = { kind: "pick", id: shape.id, start: p, cam: camRef.current, moved: false };
+      else op.current = { kind: "pan", start: p, cam: camRef.current, moved: false };
       return;
     }
-    op.current = { kind: "create", tool, start: p, startWorld: toWorld(p), id: null, before: all };
+    const w = toWorld(p);
+    if (tool === "pen") {
+      const pen = e.pointerType === "pen";
+      op.current = { kind: "ink", points: [[w.x, w.y, pen ? e.pressure || 0.5 : 0.5]], pen, before: all };
+      setInkDraft({ points: (op.current as { points: [number, number, number][] }).points, pen });
+      setSelected(null);
+      return;
+    }
+    if (tool === "eraser") {
+      op.current = { kind: "erase", before: all, removed: new Set() };
+      erase(e.clientX, e.clientY);
+      return;
+    }
+    if (tool === "connect") {
+      const from: End = shape && isFramed(shape) ? { shape: shape.id } : w;
+      const r = shape && isFramed(shape) ? bounds(shape)! : null;
+      const a = r ? { x: r.x + r.w / 2, y: r.y + r.h / 2 } : w;
+      op.current = { kind: "connect", from, a, start: p, over: null, moved: false, before: all };
+      setSelected(null);
+      return;
+    }
+    if (tool === "box" || tool === "sticky" || tool === "text") op.current = { kind: "create", tool, start: p, startWorld: w, id: null, before: all };
   };
 
   const move = (e: React.PointerEvent) => {
@@ -258,11 +309,36 @@ export default function Board({
       setCam({ k, x: mid.x - w.x * k, y: mid.y - w.y * k });
       return;
     }
+    if (o.kind === "ink") {
+      const w = toWorld(p);
+      o.points = [...o.points, [w.x, w.y, o.pen ? e.pressure || 0.5 : 0.5]];
+      setInkDraft({ points: o.points, pen: o.pen });
+      return;
+    }
+    if (o.kind === "erase") {
+      erase(e.clientX, e.clientY);
+      return;
+    }
+    if (o.kind === "connect") {
+      if (!o.moved && Math.hypot(p.x - o.start.x, p.y - o.start.y) < TAP) return;
+      o.moved = true;
+      const under = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-shape]")?.getAttribute("data-shape") ?? null;
+      const target = under && "shape" in o.from && o.from.shape === under ? null : under;
+      const ts = target ? all.find((x) => x.id === target) : null;
+      o.over = ts && isFramed(ts) ? ts.id : null;
+      const r = ts && isFramed(ts) ? bounds(ts)! : null;
+      setArrowDraft({ a: o.a, b: r ? { x: r.x + r.w / 2, y: r.y + r.h / 2 } : toWorld(p) });
+      return;
+    }
     const dx = p.x - ("start" in o ? o.start.x : 0);
     const dy = p.y - ("start" in o ? o.start.y : 0);
     const far = Math.hypot(dx, dy) >= TAP;
     const k = camRef.current.k;
-    if (o.kind === "pan") {
+    if (o.kind === "pick") {
+      if (!o.moved && !far) return;
+      o.moved = true;
+      setCam({ ...o.cam, x: o.cam.x + dx, y: o.cam.y + dy });
+    } else if (o.kind === "pan") {
       if (!o.moved && !far) return;
       o.moved = true;
       setCam({ ...o.cam, x: o.cam.x + dx, y: o.cam.y + dy });
@@ -323,8 +399,30 @@ export default function Board({
       return;
     }
     op.current = null;
+    setInkDraft(null);
+    setArrowDraft(null);
     if (!o || e.type === "pointercancel") {
-      if (o && (o.kind === "move" || o.kind === "resize" || o.kind === "create")) setShapes(o.before);
+      if (o && (o.kind === "move" || o.kind === "resize" || o.kind === "create" || o.kind === "erase")) setShapes(o.before);
+      return;
+    }
+    if (o.kind === "ink") {
+      commit([...o.before, { id: newId(), type: "ink", points: o.points, colour: ink.colour, size: ink.size, pen: o.pen }], o.before);
+      return;
+    }
+    if (o.kind === "erase") {
+      if (o.removed.size) setHist((h) => record(h, o.before));
+      return;
+    }
+    if (o.kind === "connect") {
+      if (!o.moved) return;
+      const end = toWorld(local(e));
+      const to: End = o.over ? { shape: o.over } : end;
+      if (!o.over && "x" in o.from && Math.hypot(end.x - o.from.x, end.y - o.from.y) < 12) return;
+      commit([...o.before, { id: newId(), type: "arrow", from: o.from, to }], o.before);
+      return;
+    }
+    if (o.kind === "pick") {
+      if (!o.moved) setSelected(o.id);
       return;
     }
     if (o.kind === "pan") {
@@ -394,6 +492,8 @@ export default function Board({
     bar = { left, top };
   }
   const act = (fn: (s: Shape[]) => Shape[]) => commit(fn(all));
+  const setText = (id: string, text: string) =>
+    setShapes((list) => (list ? patch(list, id, list.find((x) => x.id === id)?.type === "arrow" ? { label: text } : { text }) : list));
 
   const empty = shapes !== null && shapes.length === 0;
 
@@ -412,6 +512,8 @@ export default function Board({
       onWheel={wheel}
     >
       <div className="bd-world" style={{ transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.k})` }}>
+        {shapes && <LinesLayer shapes={shapes} layer="arrows" selected={selected} k={cam.k} />}
+        {shapes && <ArrowLabels shapes={shapes} editing={editing} onText={setText} onEditEnd={endEdit} />}
         {shapes && (
           <Shapes
             shapes={shapes}
@@ -419,12 +521,14 @@ export default function Board({
             editing={editing}
             k={cam.k}
             snapped={bump ?? snapped}
-            onText={(id, text) => setShapes((list) => (list ? patch(list, id, { text }) : list))}
+            onText={setText}
             onEditEnd={endEdit}
             onMeasure={(id, h) => setShapes((list) => (list ? patch(list, id, { h }) : list))}
             onOpenNote={onOpenNote}
           />
         )}
+        {shapes && <LinesLayer shapes={shapes} layer="ink" selected={selected} k={cam.k} />}
+        <Draft ink={inkDraft ? { ...inkDraft, colour: ink.colour, size: ink.size } : null} arrow={arrowDraft} />
       </div>
 
       {empty && (
@@ -477,6 +581,8 @@ export default function Board({
       <div onPointerDown={(e) => e.stopPropagation()}>
         <ToolRail
           tool={tool}
+          ink={ink}
+          onInk={setInk}
           onTool={(t) => {
             setTool(t);
             setSelected(null);
@@ -517,7 +623,7 @@ export default function Board({
   );
 }
 
-function makeShape(tool: Exclude<Tool, "select">, id: string, r: Rect): Shape {
+function makeShape(tool: MakeTool, id: string, r: Rect): Shape {
   if (tool === "box") return { id, type: "box", ...r, text: "", colour: "paper" };
   if (tool === "sticky") return { id, type: "sticky", ...r, text: "", colour: "gold" };
   return { id, type: "text", x: r.x, y: r.y, w: r.w, h: r.h, text: "", size: "m" };

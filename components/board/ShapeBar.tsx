@@ -81,8 +81,8 @@ export default function ShapeBar({
               <ArrowDownToLine size={17} />
             </button>
           )}
-          {shape.type !== "ink" && shape.type !== "arrow" && (
-            <button type="button" aria-label="Write" onClick={onEdit} className="bd-btn">
+          {shape.type !== "ink" && (
+            <button type="button" aria-label={shape.type === "arrow" ? "Label" : "Write"} onClick={onEdit} className="bd-btn">
               <PenLine size={17} />
             </button>
           )}
@@ -91,12 +91,16 @@ export default function ShapeBar({
               <Copy size={16} />
             </button>
           )}
-          <button type="button" aria-label="Bring to front" onClick={onFront} className="bd-btn">
-            <BringToFront size={17} />
-          </button>
-          <button type="button" aria-label="Send to back" onClick={onBack} className="bd-btn">
-            <SendToBack size={17} />
-          </button>
+          {shape.type !== "arrow" && (
+            <>
+              <button type="button" aria-label="Bring to front" onClick={onFront} className="bd-btn">
+                <BringToFront size={17} />
+              </button>
+              <button type="button" aria-label="Send to back" onClick={onBack} className="bd-btn">
+                <SendToBack size={17} />
+              </button>
+            </>
+          )}
           <button type="button" aria-label="Delete" onClick={onDelete} className="bd-btn text-[#8b0000]">
             <Trash2 size={17} />
           </button>
