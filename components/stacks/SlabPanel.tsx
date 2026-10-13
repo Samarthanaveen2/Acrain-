@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowDownToLine, Columns2, LogIn, Trash2, X } from "lucide-react";
+import { ArrowDownToLine, Columns2, DoorOpen, Flame, LogIn, MapPin, NotebookPen, PenLine, ShieldCheck, Trash2, TriangleAlert, Users, X } from "lucide-react";
 import { findNote, type Note } from "@/lib/notes";
-import { pathTo, subtree, THREAT_LABEL, type Layer, type Margin, type Stack, type Threat } from "@/lib/stacks";
+import { pathTo, subtree, THREAT_COLOUR, THREAT_LABEL, type Layer, type Margin, type Stack, type Threat } from "@/lib/stacks";
+
+const MONEY_LABEL: Record<Margin, string> = { thin: "Little", medium: "Some", fat: "Most" };
 
 /** What opens when you tap a slab: its name, big actions, and what you've noticed about it */
 export default function SlabPanel({
@@ -16,6 +18,7 @@ export default function SlabPanel({
   onSplit,
   onGoInside,
   onDelete,
+  onWrite,
   onClose,
 }: {
   layer: Layer;
@@ -28,20 +31,23 @@ export default function SlabPanel({
   /** Make this slab the top of the view */
   onGoInside: () => void;
   onDelete: () => void;
+  /** Open the full page for "How it works" */
+  onWrite: () => void;
   onClose: () => void;
 }) {
   const isTop = !layer.parent;
   const kids = subtree(stack, layer.id).size - 1;
   const [confirm, setConfirm] = useState(false);
   const [noteQuery, setNoteQuery] = useState("");
+  const [linking, setLinking] = useState(false);
   const linked = layer.note ? findNote(notes, layer.note) : undefined;
   const matches = noteQuery.trim()
     ? notes.filter((n) => n.title.toLowerCase().includes(noteQuery.trim().toLowerCase())).slice(0, 5)
     : [];
 
-  const label = "mt-4 block font-mono text-[11px] tracking-wide text-[#777] uppercase";
-  const input = "mt-1 w-full rounded-md border-[1.5px] border-[#111]/30 bg-transparent px-2.5 py-1.5 text-[1.3rem] outline-none focus:border-[#111]";
-  const seg = (on: boolean) => `flex-1 px-2 py-1 text-[1.1rem] ${on ? "bg-[#111] text-[#fffff8]" : ""}`;
+  const label = "mt-5 block font-mono text-[11px] tracking-wide text-[#777] uppercase";
+  const input =
+    "mt-1.5 w-full rounded-lg border-[1.5px] border-[#111]/30 bg-transparent px-3 py-2 font-serif text-[1.35rem] outline-none focus:border-[#111]";
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col justify-end bg-black/15" onClick={onClose}>
@@ -94,64 +100,63 @@ export default function SlabPanel({
           </p>
         )}
 
-        <label className={label}>
-          How it works
-          <textarea
-            value={layer.how ?? ""}
-            onChange={(e) => onChange({ how: e.target.value })}
-            rows={2}
-            placeholder="In your own words"
-            className={`${input} resize-none font-serif normal-case`}
-          />
-        </label>
+        {/* How it works: a page to write on, not a box */}
+        <button type="button" onClick={onWrite} className="slab-card mt-5 w-full text-left">
+          <span className="flex items-center gap-2 font-mono text-[11px] tracking-wide text-[#777] uppercase">
+            <PenLine size={14} /> How it works
+          </span>
+          {layer.how?.trim() ? (
+            <span className="mt-1.5 line-clamp-4 block text-[1.35rem] leading-snug whitespace-pre-line">{layer.how}</span>
+          ) : (
+            <span className="mt-1.5 block text-[1.35rem] leading-snug text-[#999] italic">Write how it works…</span>
+          )}
+        </button>
 
-        <label className={label}>
-          Who&rsquo;s in it
-          <input value={layer.players ?? ""} onChange={(e) => onChange({ players: e.target.value })} placeholder="Companies, people, countries" className={`${input} font-serif normal-case tracking-normal`} />
-        </label>
-
-        <p className={label}>How much money stays here</p>
-        <div role="group" aria-label="Margin" className="mt-1 flex overflow-hidden rounded-md border-[1.5px] border-[#111]">
-          {([undefined, "thin", "medium", "fat"] as (Margin | undefined)[]).map((m) => (
-            <button key={m ?? "none"} type="button" aria-pressed={layer.margin === m} onClick={() => onChange({ margin: m })} className={seg(layer.margin === m)}>
-              {m ?? "?"}
-            </button>
-          ))}
+        <p className={label}>Where&rsquo;s the money?</p>
+        <div className="mt-1.5 grid grid-cols-3 gap-2">
+          {(["thin", "medium", "fat"] as Margin[]).map((m, i) => {
+            const on = layer.margin === m;
+            return (
+              <button
+                key={m}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onChange({ margin: on ? undefined : m })}
+                className={`slab-choice ${on ? "slab-choice-on bg-[#c99a2e] text-[#111]" : ""}`}
+              >
+                <span className="flex h-5 items-end justify-center gap-0.5" aria-hidden>
+                  {Array.from({ length: i + 1 }, (_, k) => (
+                    <span key={k} className="coin" style={{ marginBottom: k * 3 }} />
+                  ))}
+                </span>
+                <span>{MONEY_LABEL[m]}</span>
+              </button>
+            );
+          })}
         </div>
 
-        <label className="mt-4 flex items-start gap-3">
-          <input type="checkbox" checked={!!layer.choke} onChange={(e) => onChange({ choke: e.target.checked })} className="mt-1 h-5 w-5 accent-[#8b0000]" />
-          <span>
-            <span className="block text-[1.3rem]">Chokepoint</span>
-            <span className="block text-[1.05rem] text-[#777]">Only a few players. Whoever controls this has leverage over the whole stack.</span>
-          </span>
-        </label>
-
-        <p className={label}>Could this get cheap? (AI, open source, copying)</p>
-        <div role="group" aria-label="Threat" className="mt-1 flex overflow-hidden rounded-md border-[1.5px] border-[#111]">
-          {([undefined, "safe", "at-risk", "being-eaten"] as (Threat | undefined)[]).map((t) => (
-            <button key={t ?? "none"} type="button" aria-pressed={layer.threat === t} onClick={() => onChange({ threat: t })} className={seg(layer.threat === t)}>
-              {t ? THREAT_LABEL[t] : "?"}
-            </button>
-          ))}
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            aria-pressed={!!layer.choke}
+            onClick={() => onChange({ choke: !layer.choke })}
+            className={`slab-choice items-start text-left ${layer.choke ? "slab-choice-on bg-[#8b0000] text-[#fffff8]" : ""}`}
+          >
+            <MapPin size={20} />
+            <span className="text-[1.25rem]">Chokepoint</span>
+            <span className="text-[1rem] leading-tight opacity-70">Only a few players hold this</span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={!!layer.plugIn}
+            onClick={() => onChange({ plugIn: !layer.plugIn })}
+            className={`slab-choice items-start text-left ${layer.plugIn ? "slab-choice-on bg-[#31566f] text-[#fffff8]" : ""}`}
+          >
+            <DoorOpen size={20} />
+            <span className="text-[1.25rem]">I could get in here</span>
+            <span className="text-[1rem] leading-tight opacity-70">Build, work or invest</span>
+          </button>
         </div>
-        {layer.threat && layer.threat !== "safe" && (
-          <input
-            aria-label="Eaten by what"
-            value={layer.threatBy ?? ""}
-            onChange={(e) => onChange({ threatBy: e.target.value })}
-            placeholder="By what?"
-            className={input}
-          />
-        )}
-
-        <label className="mt-4 flex items-start gap-3">
-          <input type="checkbox" checked={!!layer.plugIn} onChange={(e) => onChange({ plugIn: e.target.checked })} className="mt-1 h-5 w-5 accent-[#31566f]" />
-          <span>
-            <span className="block text-[1.3rem]">I could enter here</span>
-            <span className="block text-[1.05rem] text-[#777]">A layer where you could build, work or invest.</span>
-          </span>
-        </label>
         {layer.plugIn && (
           <input
             aria-label="What it would take"
@@ -162,32 +167,63 @@ export default function SlabPanel({
           />
         )}
 
-        <p className={label}>Note</p>
+        <p className={label}>Getting eaten? (AI, open source, copying)</p>
+        <div className="mt-1.5 grid grid-cols-3 gap-2">
+          {(["safe", "at-risk", "being-eaten"] as Threat[]).map((t) => {
+            const on = layer.threat === t;
+            const Icon = t === "safe" ? ShieldCheck : t === "at-risk" ? TriangleAlert : Flame;
+            return (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onChange({ threat: on ? undefined : t })}
+                className={`slab-choice ${on ? "slab-choice-on text-[#fffff8]" : ""}`}
+                style={on ? { background: THREAT_COLOUR[t] } : undefined}
+              >
+                <Icon size={20} />
+                <span>{THREAT_LABEL[t]}</span>
+              </button>
+            );
+          })}
+        </div>
+        {layer.threat && layer.threat !== "safe" && (
+          <input aria-label="Eaten by what" value={layer.threatBy ?? ""} onChange={(e) => onChange({ threatBy: e.target.value })} placeholder="By what?" className={input} />
+        )}
+
+        <p className={label}>Who&rsquo;s in it</p>
+        <div className="relative">
+          <Users size={17} className="absolute top-1/2 left-3 -translate-y-1/2 text-[#888]" />
+          <input
+            aria-label="Who’s in it"
+            value={layer.players ?? ""}
+            onChange={(e) => onChange({ players: e.target.value })}
+            placeholder="Companies, people, countries"
+            className={`${input} pl-9`}
+          />
+        </div>
+
+        <p className={label}>Deeper thinking</p>
         {layer.note ? (
-          <div className="mt-1 flex items-center gap-2">
+          <div className="mt-1.5 flex items-center gap-2">
             <Link
               href={linked ? `/notes/${linked.id}` : `/new-note?title=${encodeURIComponent(layer.note)}`}
-              className="min-w-0 flex-1 truncate rounded-md bg-[#111] px-3 py-1.5 text-[1.2rem] text-[#fffff8] no-underline"
+              className="slab-choice slab-choice-on min-w-0 flex-1 flex-row justify-start gap-2 bg-[#111] px-3 text-left text-[#fffff8] no-underline"
             >
-              {linked ? `Open “${linked.title}”` : `Write “${layer.note}”`}
+              <NotebookPen size={18} className="shrink-0" />
+              <span className="truncate text-[1.25rem]">{linked ? `Open “${linked.title}”` : `Write “${layer.note}”`}</span>
             </Link>
             <button type="button" onClick={() => onChange({ note: undefined })} className="font-mono text-[11px] text-[#777] underline">
               unlink
             </button>
           </div>
-        ) : (
+        ) : linking ? (
           <div>
-            <input
-              aria-label="Link a note"
-              value={noteQuery}
-              onChange={(e) => setNoteQuery(e.target.value)}
-              placeholder="Link a note for deeper thinking"
-              className={input}
-            />
+            <input autoFocus aria-label="Link a note" value={noteQuery} onChange={(e) => setNoteQuery(e.target.value)} placeholder="Search your notes" className={input} />
             {noteQuery.trim() && (
-              <div className="mt-1 flex flex-wrap gap-1.5">
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {matches.map((n) => (
-                  <button key={n.id} type="button" onClick={() => onChange({ note: n.title })} className="rounded-full border border-[#111]/50 px-2.5 py-0.5 text-[1.1rem]">
+                  <button key={n.id} type="button" onClick={() => onChange({ note: n.title })} className="rounded-full border border-[#111]/50 px-2.5 py-0.5 text-[1.15rem]">
                     {n.title}
                   </button>
                 ))}
@@ -195,7 +231,7 @@ export default function SlabPanel({
                   <button
                     type="button"
                     onClick={() => onChange({ note: noteQuery.trim() })}
-                    className="rounded-full border border-dashed border-[#111]/50 px-2.5 py-0.5 text-[1.1rem] text-[#555]"
+                    className="rounded-full border border-dashed border-[#111]/50 px-2.5 py-0.5 text-[1.15rem] text-[#555]"
                   >
                     ＋ new note “{noteQuery.trim()}”
                   </button>
@@ -203,6 +239,11 @@ export default function SlabPanel({
               </div>
             )}
           </div>
+        ) : (
+          <button type="button" onClick={() => setLinking(true)} className="slab-choice mt-1.5 w-full flex-row justify-start gap-2 px-3">
+            <NotebookPen size={18} />
+            <span className="text-[1.25rem]">Link a note</span>
+          </button>
         )}
 
         <div className="pb-[calc(1.25rem+var(--safe-bottom))]" />

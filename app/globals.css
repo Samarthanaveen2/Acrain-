@@ -639,3 +639,50 @@ h3 {
   border-color: #8b0000;
   box-shadow: 0 3px 0 #5a0000;
 }
+.slab-card {
+  padding: 12px 14px;
+  border: 1.5px solid #111;
+  border-radius: 12px;
+  background: #fbf8ea;
+  box-shadow: 0 4px 0 #111;
+}
+.slab-card:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #111;
+}
+.slab-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 3.6rem;
+  padding: 10px 8px;
+  border: 1.5px solid #111;
+  border-radius: 12px;
+  font-size: 1.15rem;
+  line-height: 1.15;
+  box-shadow: 0 3px 0 #111;
+  transition: background-color 150ms, color 150ms;
+}
+.slab-choice:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #111;
+}
+.slab-choice-on {
+  box-shadow: 0 3px 0 #111, inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+.coin {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: #e2b84a;
+  border: 1.5px solid #6b4f12;
+}
+.writer-area,
+.writer-area:focus,
+.writer-area:focus-visible {
+  outline: none;
+  box-shadow: none;
+}

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Note } from "@/lib/notes";
 import { addLayer, addSibling, depthOf, pathTo, removeLayer, top, updateLayer, type Stack } from "@/lib/stacks";
+import LayerWriter from "./LayerWriter";
 import SlabPanel from "./SlabPanel";
 import Tower from "./Tower";
 
@@ -69,7 +70,11 @@ export default function StackView({
     requestAnimationFrame(() => document.querySelector(`[data-slab="${view.open}"]`)?.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" }));
   }, [view.open]);
 
-  const openSlab = (id: string | null) => setView((v) => ({ ...v, open: id }));
+  const [writing, setWriting] = useState(false);
+  const openSlab = (id: string | null) => {
+    setWriting(false);
+    setView((v) => ({ ...v, open: id }));
+  };
 
   const addUnder = (parent: string) => {
     const { stack: next, id } = addLayer(stack, parent, "");
@@ -141,6 +146,7 @@ export default function StackView({
             openSlab(id);
           }}
           onGoInside={() => setView({ root: open.id, open: null })}
+          onWrite={() => setWriting(true)}
           onDelete={async () => {
             if (!open.parent) {
               openSlab(null);
@@ -155,6 +161,9 @@ export default function StackView({
           }}
           onClose={close}
         />
+      )}
+      {open && writing && (
+        <LayerWriter layer={open} stack={stack} onChange={(how) => change(updateLayer(stack, open.id, { how }))} onClose={() => setWriting(false)} />
       )}
     </div>
   );
