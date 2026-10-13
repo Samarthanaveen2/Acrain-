@@ -802,3 +802,11 @@ h3 {
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
   z-index: 8;
 }
+.bd-end {
+  pointer-events: all;
+  touch-action: none;
+}
+.bd-target {
+  outline: 3px solid #31566f;
+  outline-offset: 4px;
+}

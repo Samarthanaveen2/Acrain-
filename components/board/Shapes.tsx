@@ -14,12 +14,15 @@ export default function Shapes({
   editing,
   k,
   snapped,
+  target = null,
   onText,
   onEditEnd,
   onMeasure,
   onOpenNote,
 }: {
   shapes: Shape[];
+  /** A shape a connection's end is hovering over */
+  target?: string | null;
   selected: string | null;
   editing: string | null;
   /** Camera zoom, to keep handles a steady size on screen */
@@ -43,6 +46,7 @@ export default function Shapes({
             edit={editing === s.id}
             k={k}
             bump={snapped === s.id}
+            aim={target === s.id}
             onText={onText}
             onEditEnd={onEditEnd}
             onMeasure={onMeasure}
@@ -60,12 +64,14 @@ function FramedShape({
   edit,
   k,
   bump,
+  aim,
   onText,
   onEditEnd,
   onMeasure,
   onOpenNote,
 }: {
   s: Framed;
+  aim: boolean;
   on: boolean;
   edit: boolean;
   k: number;
@@ -112,6 +118,7 @@ function FramedShape({
     cls += " bd-text";
   }
   if (bump) cls += " bd-bump";
+  if (aim) cls += " bd-target";
 
   const text = s.text;
   const placeholder = s.type === "box" ? "" : s.type === "sticky" ? "" : "Text";

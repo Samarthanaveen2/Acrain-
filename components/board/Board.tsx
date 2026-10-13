@@ -7,6 +7,7 @@ import {
   boardBounds,
   bounds,
   bringFront,
+  endPoint,
   duplicate,
   isFramed,
   newId,
@@ -25,7 +26,7 @@ import {
   type Rect,
   type Shape,
 } from "@/lib/board";
-import { ArrowLabels, Draft, LinesLayer } from "./Lines";
+import { ArrowLabels, Draft, EndDots, LinesLayer } from "./Lines";
 import NotePicker from "./NotePicker";
 import ShapeBar from "./ShapeBar";
 import Shapes, { type Corner } from "./Shapes";
@@ -42,7 +43,8 @@ type Op =
   | { kind: "ink"; points: [number, number, number][]; pen: boolean; before: Shape[] }
   | { kind: "connect"; from: End; a: P; start: P; over: string | null; moved: boolean; before: Shape[] }
   | { kind: "erase"; before: Shape[]; removed: Set<string> }
-  | { kind: "pick"; id: string; start: P; cam: Cam; moved: boolean };
+  | { kind: "pick"; id: string; start: P; cam: Cam; moved: boolean }
+  | { kind: "end"; id: string; which: "from" | "to"; before: Shape[]; moved: boolean };
 
 const TAP = 6;
 const MIN_K = 0.2;
@@ -105,6 +107,8 @@ export default function Board({
   const [ink, setInk] = useState({ colour: "#111", size: INK_SIZES[0] });
   const [inkDraft, setInkDraft] = useState<{ points: [number, number, number][]; pen: boolean } | null>(null);
   const [arrowDraft, setArrowDraft] = useState<{ a: P; b: P } | null>(null);
+  // The box a connection's end is about to attach to
+  const [target, setTarget] = useState<string | null>(null);
   const [linking, setLinking] = useState<string | null>(null);
 
   // The board arrives from storage once; after that, this screen owns it
@@ -240,7 +244,8 @@ export default function Board({
   const startPinch = () => {
     const cur = op.current;
     // A second finger cancels whatever the first one was doing
-    if (cur && (cur.kind === "move" || cur.kind === "resize" || cur.kind === "create" || cur.kind === "erase")) setShapes(cur.before);
+    if (cur && (cur.kind === "move" || cur.kind === "resize" || cur.kind === "create" || cur.kind === "erase" || cur.kind === "end")) setShapes(cur.before);
+    setTarget(null);
     setInkDraft(null);
     setArrowDraft(null);
     const [a, b] = [...pointers.current.values()];
@@ -266,6 +271,17 @@ export default function Board({
     const shapeId = t.closest("[data-shape]")?.getAttribute("data-shape") ?? null;
     const shape = shapeId ? all.find((s) => s.id === shapeId) : null;
 
+    const endEl = t.closest("[data-end]");
+    if (tool === "select" && endEl) {
+      op.current = {
+        kind: "end",
+        id: endEl.getAttribute("data-arrow")!,
+        which: endEl.getAttribute("data-end") as "from" | "to",
+        before: all,
+        moved: false,
+      };
+      return;
+    }
     if (tool === "select") {
       if (handle && shape && isFramed(shape) && selected === shape.id) {
         op.current = { kind: "resize", id: shape.id, corner: handle, start: p, orig: bounds(shape)!, before: all };
@@ -322,6 +338,26 @@ export default function Board({
     }
     if (o.kind === "erase") {
       erase(e.clientX, e.clientY);
+      return;
+    }
+    if (o.kind === "end") {
+      o.moved = true;
+      const arrow = o.before.find((x) => x.id === o.id);
+      if (arrow?.type !== "arrow") return;
+      const other = o.which === "from" ? arrow.to : arrow.from;
+      // The dot under the finger hides what's beneath it, so look through the whole stack of elements
+      let over: string | null = null;
+      for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
+        const id = el.closest("[data-shape]")?.getAttribute("data-shape");
+        const hit = id ? o.before.find((x) => x.id === id) : null;
+        if (hit && isFramed(hit) && !("shape" in other && other.shape === hit.id)) {
+          over = hit.id;
+          break;
+        }
+      }
+      setTarget(over);
+      const end: End = over ? { shape: over } : toWorld(p);
+      setShapes(patch(o.before, o.id, { [o.which]: end } as Partial<Shape>));
       return;
     }
     if (o.kind === "connect") {
@@ -406,8 +442,21 @@ export default function Board({
     op.current = null;
     setInkDraft(null);
     setArrowDraft(null);
+    setTarget(null);
     if (!o || e.type === "pointercancel") {
-      if (o && (o.kind === "move" || o.kind === "resize" || o.kind === "create" || o.kind === "erase")) setShapes(o.before);
+      if (o && (o.kind === "move" || o.kind === "resize" || o.kind === "create" || o.kind === "erase" || o.kind === "end")) setShapes(o.before);
+      return;
+    }
+    if (o.kind === "end") {
+      if (!o.moved) return;
+      const a = all.find((x) => x.id === o.id);
+      // Both ends in the same spot isn't a connection: put it back
+      if (a?.type === "arrow") {
+        const p1 = endPoint(a.from, a.to, all);
+        const p2 = endPoint(a.to, a.from, all);
+        if (Math.hypot(p1.x - p2.x, p1.y - p2.y) < 12) return setShapes(o.before);
+      }
+      setHist((h) => record(h, o.before));
       return;
     }
     if (o.kind === "ink") {
@@ -543,6 +592,7 @@ export default function Board({
             editing={editing}
             k={cam.k}
             snapped={bump ?? snapped}
+            target={target}
             onText={setText}
             onEditEnd={endEdit}
             onMeasure={(id, h) => setShapes((list) => (list ? patch(list, id, { h }) : list))}
@@ -550,6 +600,7 @@ export default function Board({
           />
         )}
         {shapes && <LinesLayer shapes={shapes} layer="ink" selected={selected} k={cam.k} />}
+        {shapes && <EndDots shapes={shapes} selected={selected} k={cam.k} />}
         <Draft ink={inkDraft ? { ...inkDraft, colour: ink.colour, size: ink.size } : null} arrow={arrowDraft} />
       </div>
 

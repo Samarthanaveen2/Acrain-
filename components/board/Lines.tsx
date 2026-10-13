@@ -167,3 +167,34 @@ export function Draft({ ink, arrow }: { ink: { points: [number, number, number][
     </svg>
   );
 }
+
+/** The two dots on a selected connection's ends: drag one onto a box to attach it, or into space to leave it loose */
+export function EndDots({ shapes, selected, k }: { shapes: Shape[]; selected: string | null; k: number }) {
+  const s = selected ? shapes.find((x) => x.id === selected) : null;
+  if (!s || s.type !== "arrow") return null;
+  const ends = [
+    { which: "from" as const, p: endPoint(s.from, s.to, shapes), attached: "shape" in s.from },
+    { which: "to" as const, p: endPoint(s.to, s.from, shapes), attached: "shape" in s.to },
+  ];
+  const hit = 18 / k;
+  const xs = ends.map((e) => e.p.x);
+  const ys = ends.map((e) => e.p.y);
+  const r = { x: Math.min(...xs) - hit * 2, y: Math.min(...ys) - hit * 2, w: Math.max(...xs) - Math.min(...xs) + hit * 4, h: Math.max(...ys) - Math.min(...ys) + hit * 4 };
+  return (
+    <svg className="bd-lines" style={{ left: r.x, top: r.y, width: r.w, height: r.h }} viewBox={`${r.x} ${r.y} ${r.w} ${r.h}`}>
+      {ends.map((e) => (
+        <g key={e.which} data-end={e.which} data-arrow={s.id} className="bd-end" aria-label={`${e.which === "from" ? "Start" : "End"} of connection`}>
+          <circle cx={e.p.x} cy={e.p.y} r={hit} fill="transparent" />
+          <circle
+            cx={e.p.x}
+            cy={e.p.y}
+            r={5.5 / k}
+            fill={e.attached ? "#31566f" : "#fffff8"}
+            stroke="#31566f"
+            strokeWidth={2 / k}
+          />
+        </g>
+      ))}
+    </svg>
+  );
+}
