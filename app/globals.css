@@ -503,26 +503,88 @@ h3 {
   padding-bottom: calc(4.5rem + var(--safe-bottom));
 }
 
-/* Map: fills the screen between the status bar and the tab bar */
-.map-screen {
-  height: calc(100dvh - var(--safe-top) - 4.5rem - var(--safe-bottom));
-}
 
-/* 3D map: names next to the stars */
-.map-space-label {
-  position: absolute;
-  top: 0;
-  left: 0;
-  white-space: nowrap;
-  font-family: var(--font-serif);
-  font-size: 12.5px;
-  line-height: 1;
-  color: #f4efdf;
-  text-shadow: 0 0 4px #05070d, 0 0 10px #05070d;
-  transition: opacity 250ms;
-  will-change: transform, opacity;
+/* Stacks: layers joined by lines, branching down */
+.stack-tree,
+.stack-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
-.map-space-label[data-on="1"] {
-  font-size: 15px;
-  font-weight: 600;
+.stack-children {
+  margin-left: 0.32rem;
+}
+.stack-top > .stack-children {
+  margin-left: 0.45rem;
+}
+.stack-node {
+  position: relative;
+}
+.stack-children > .stack-node {
+  padding-left: 1.3rem;
+}
+/* the rail down from the parent, and the elbow into this layer */
+.stack-children > .stack-node::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-left: 1.5px solid #b9b9ae;
+}
+.stack-children > .stack-node.stack-last::before {
+  bottom: auto;
+  height: 1.55rem;
+}
+.stack-children > .stack-node::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1.55rem;
+  width: 1.25rem;
+  border-top: 1.5px solid var(--line, #b9b9ae);
+}
+.stack-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.55rem 0 0.55rem;
+  border-radius: 6px;
+  transition: background-color 600ms, opacity 200ms;
+}
+.stack-flash {
+  background: rgba(49, 86, 111, 0.12);
+}
+.stack-chevron {
+  flex: none;
+  width: 1.4rem;
+  height: 1.4rem;
+  margin-top: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+}
+.stack-dot {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  margin-top: 0.62rem;
+  border-radius: 999px;
+  border: 1.5px solid #111;
+  transition: all 200ms;
+}
+.stack-top > .stack-row > .stack-dot {
+  width: 15px;
+  height: 15px;
+  margin-top: 0.85rem;
+}
+.stack-add {
+  flex: none;
+  padding: 0.35rem;
+  margin-top: 0.1rem;
+  color: #888;
+}
+.stack-hidden {
+  margin: -0.3rem 0 0.4rem 1.3rem;
 }

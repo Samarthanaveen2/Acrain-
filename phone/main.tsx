@@ -5,15 +5,16 @@ import ComingSoon from "@/components/ComingSoon";
 import NotesHome from "@/components/notes/NotesHome";
 import NoteView from "@/components/notes/NoteView";
 import NoteEditor from "@/components/notes/NoteEditor";
-import NotesMap from "@/components/notes/NotesMap";
-import NotesTimeline from "@/components/notes/NotesTimeline";
-import { appendSeeAlso, findNote, freeId, type Note } from "@/lib/notes";
+import StacksHome from "@/components/stacks/StacksHome";
+import StackView from "@/components/stacks/StackView";
+import { findNote, freeId, type Note } from "@/lib/notes";
+import { layersForNote, newStack, type Stack } from "@/lib/stacks";
 import { NotesContext } from "@/components/notes/rich/context";
 import { createNote, deleteNote, saveNote, subscribeNotes } from "./notes-store";
 import { back, navigate, usePath } from "./router";
 import TabBar from "./TabBar";
 import Settings from "./Settings";
-import { saveLayout, saveLayout3d, useMapLayout } from "./map-store";
+import { deleteStack, saveStack, subscribeStacks } from "./stacks-store";
 
 type Status = "loading" | "offline" | "ready";
 const wrap = "mx-auto max-w-[1166px] px-4 pb-24 min-[731px]:px-8";
@@ -27,6 +28,20 @@ function useNotes() {
       (notes) => alive && setState({ status: "ready", notes }),
       () => alive && setState((s) => ({ ...s, status: "offline" })),
     ).then((s) => (alive ? (stop = s) : s()));
+    return () => {
+      alive = false;
+      stop?.();
+    };
+  }, []);
+  return state;
+}
+
+function useStacks() {
+  const [state, setState] = useState<{ status: "loading" | "ready"; stacks: Stack[] }>({ status: "loading", stacks: [] });
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    let alive = true;
+    subscribeStacks((stacks) => alive && setState({ status: "ready", stacks })).then((s) => (alive ? (stop = s) : s()));
     return () => {
       alive = false;
       stop?.();
@@ -93,12 +108,12 @@ function NewNote({ notes, initialTitle }: { notes: Note[]; initialTitle: string 
   );
 }
 
-function Screen({ path, status, notes }: { path: string; status: Status; notes: Note[] }) {
-  const positions = useMapLayout();
+function Screen({ path, status, notes, stacks }: { path: string; status: Status; notes: Note[]; stacks: { status: "loading" | "ready"; stacks: Stack[] } }){
   const [route, query = ""] = path.split("?");
   const m = route.match(/^\/notes\/([^/]+)(\/edit)?$/);
-  const restore = async (list: Note[]) => {
+  const restore = async (list: Note[], stackList: Stack[]) => {
     for (const n of list) await createNote(n);
+    for (const st of stackList) await saveStack(st);
   };
 
   if (route === "/new-note") {
@@ -106,31 +121,39 @@ function Screen({ path, status, notes }: { path: string; status: Status; notes: 
     if (status !== "ready") return <p className={`${wrap} pt-10 font-mono text-[13px] text-[#777]`}>Loading…</p>;
     return <NewNote key={title} notes={notes} initialTitle={title} />;
   }
-  if (route === "/map")
+  if (route === "/stacks")
     return (
-      <NotesMap
-        notes={notes}
-        positions={positions?.flat ?? null}
-        onSavePositions={saveLayout}
-        positions3={positions?.space ?? null}
-        onSavePositions3={saveLayout3d}
-        onOpen={(to) => navigate(to)}
-        onLink={async (from, toTitle) => {
-          await saveNote(appendSeeAlso(from, toTitle), from.title, notes);
-          return () => saveNote(from, from.title, notes);
-        }}
+      <StacksHome
+        stacks={stacks.stacks}
+        status={stacks.status}
         onCreate={async (title) => {
-          const existing = findNote(notes, title);
-          if (existing) return existing.id;
-          const now = new Date().toISOString();
-          const note: Note = { id: freeId(notes, title), title, body: "", tags: [], created: now, updated: now };
-          await createNote(note);
-          return note.id;
+          const st = newStack(title, stacks.stacks);
+          await saveStack(st);
+          navigate(`/stacks/${st.id}`);
         }}
       />
     );
-  if (route === "/timeline") return <NotesTimeline notes={notes} />;
-  if (route === "/settings") return <Settings notes={notes} onRestore={restore} />;
+  const sm = route.match(/^\/stacks\/([^/]+)$/);
+  if (sm) {
+    const st = stacks.stacks.find((x) => x.id === sm[1]);
+    if (!st) return <p className={`${wrap} pt-10 font-mono text-[13px] text-[#777]`}>{stacks.status === "loading" ? "Loading…" : "Stack not found."}</p>;
+    return (
+      <StackView
+        key={`${st.id}:${query}`}
+        stack={st}
+        stacks={stacks.stacks}
+        notes={notes}
+        focus={new URLSearchParams(query).get("focus")}
+        onSave={saveStack}
+        onDelete={async () => {
+          await deleteStack(st.id);
+          navigate("/stacks", { root: true });
+        }}
+        onBack={back}
+      />
+    );
+  }
+  if (route === "/settings") return <Settings notes={notes} stacks={stacks.stacks} onRestore={restore} />;
   if (route === "/about")
     return (
       <ComingSoon title="About">
@@ -161,7 +184,17 @@ function Screen({ path, status, notes }: { path: string; status: Status; notes: 
             }}
           />
         ) : (
-          <NoteView key={note.id} note={note} notes={notes} onBack={back} />
+          <NoteView
+            key={note.id}
+            note={note}
+            notes={notes}
+            onBack={back}
+            inStacks={layersForNote(stacks.stacks, note.title).map(({ stack, layer }) => ({
+              href: `/stacks/${stack.id}?focus=${layer.id}`,
+              stack: stack.title,
+              layer: layer.parent ? layer.name : "",
+            }))}
+          />
         )}
       </NotesContext.Provider>
     );
@@ -173,12 +206,13 @@ function Screen({ path, status, notes }: { path: string; status: Status; notes: 
 function App() {
   const path = usePath();
   const { status, notes } = useNotes();
+  const stacks = useStacks();
   // The editor gets the whole screen (and the keyboard); everywhere else shows the tabs
   const editing = /\/edit$/.test(path.split("?")[0]);
   return (
     <>
       <div className={editing ? "" : "pb-tabbar"}>
-        <Screen path={path} status={status} notes={notes} />
+        <Screen path={path} status={status} notes={notes} stacks={stacks} />
       </div>
       {!editing && <TabBar path={path} />}
     </>

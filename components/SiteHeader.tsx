@@ -2,8 +2,7 @@ import Link from "next/link";
 
 const links = [
   { href: "/", label: "Notes" },
-  { href: "/map", label: "Map" },
-  { href: "/timeline", label: "Timeline" },
+  { href: "/stacks", label: "Stacks" },
 ];
 
 /** ai-2027's header: huge serif title and byline on the left, plain nav on the right with a boxed last link */

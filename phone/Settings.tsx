@@ -5,11 +5,20 @@ import { Share } from "@capacitor/share";
 import { Download, Upload } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
 import type { Note } from "@/lib/notes";
+import type { Stack } from "@/lib/stacks";
 
 declare const __APP_VERSION__: string;
 
 /** Settings: a backup file you can keep in Files or iCloud, and restoring from one */
-export default function Settings({ notes, onRestore }: { notes: Note[]; onRestore: (notes: Note[]) => Promise<void> }) {
+export default function Settings({
+  notes,
+  stacks,
+  onRestore,
+}: {
+  notes: Note[];
+  stacks: Stack[];
+  onRestore: (notes: Note[], stacks: Stack[]) => Promise<void>;
+}) {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const file = useRef<HTMLInputElement>(null);
@@ -19,7 +28,7 @@ export default function Settings({ notes, onRestore }: { notes: Note[]; onRestor
     setMsg("");
     const day = new Date().toISOString().slice(0, 10);
     const name = `Acrain backup ${day}.json`;
-    const json = JSON.stringify({ acrain: 1, exported: new Date().toISOString(), notes }, null, 1);
+    const json = JSON.stringify({ acrain: 1, exported: new Date().toISOString(), notes, stacks }, null, 1);
     try {
       if (Capacitor.isNativePlatform()) {
         const { uri } = await Filesystem.writeFile({ path: name, data: json, directory: Directory.Cache, encoding: Encoding.UTF8 });
@@ -47,9 +56,13 @@ export default function Settings({ notes, onRestore }: { notes: Note[]; onRestor
       const list: Note[] = (Array.isArray(parsed) ? parsed : (parsed.notes ?? [])).filter(
         (n: Note) => n?.id && typeof n.title === "string",
       );
-      if (!list.length) throw new Error("no notes in that file");
-      await onRestore(list);
-      setMsg(`Restored ${list.length} ${list.length === 1 ? "note" : "notes"}. Notes with the same name were replaced; the rest were kept.`);
+      const stackList: Stack[] = (Array.isArray(parsed?.stacks) ? parsed.stacks : []).filter(
+        (s: Stack) => s?.id && typeof s.title === "string" && Array.isArray(s.layers),
+      );
+      if (!list.length && !stackList.length) throw new Error("no notes in that file");
+      await onRestore(list, stackList);
+      const parts = [`${list.length} ${list.length === 1 ? "note" : "notes"}`, stackList.length ? `${stackList.length} ${stackList.length === 1 ? "stack" : "stacks"}` : ""];
+      setMsg(`Restored ${parts.filter(Boolean).join(" and ")}. Ones with the same name were replaced; the rest were kept.`);
     } catch (e) {
       setMsg(`Couldn't restore (${(e as { message?: string })?.message ?? String(e)}). Pick an Acrain backup file.`);
     }
@@ -62,11 +75,12 @@ export default function Settings({ notes, onRestore }: { notes: Note[]; onRestor
 
       <h2 className="font-mono text-[11px] tracking-wide text-[#777] uppercase">Your notes</h2>
       <p className="mt-1 text-[1.15rem] leading-snug text-[#555]">
-        {notes.length} {notes.length === 1 ? "note" : "notes"}, saved on this phone. Keep a backup somewhere safe in case the
+        {notes.length} {notes.length === 1 ? "note" : "notes"} and {stacks.length} {stacks.length === 1 ? "stack" : "stacks"}, saved on this
+        phone. Keep a backup somewhere safe in case the
         app is ever deleted.
       </p>
       <div className="mt-3 border-t border-[#666]/20">
-        <button type="button" className={row} onClick={backUp} disabled={busy || !notes.length}>
+        <button type="button" className={row} onClick={backUp} disabled={busy || (!notes.length && !stacks.length)}>
           <Download size={20} /> Back up to Files
         </button>
         <button type="button" className={row} onClick={() => file.current?.click()}>

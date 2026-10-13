@@ -7,7 +7,18 @@ import { backlinks, findNote, fmtDate, footnotesIn, markdownToHtml, noteLinks, t
 import RichView from "./rich/RichView";
 
 /** Reading a note: ai-2027 typography, then what it connects to and what connects to it */
-export default function NoteView({ note, notes, onBack }: { note: Note; notes: Note[]; onBack?: () => void }) {
+export default function NoteView({
+  note,
+  notes,
+  onBack,
+  inStacks = [],
+}: {
+  note: Note;
+  notes: Note[];
+  onBack?: () => void;
+  /** Stack layers that point at this note */
+  inStacks?: { href: string; stack: string; layer: string }[];
+}) {
   const linkedFrom = backlinks(notes, note);
   const linksTo = noteLinks(note).map((t) => ({ title: t, note: findNote(notes, t) }));
   const footnotes = note.doc ? footnotesIn(note.doc) : [];
@@ -97,6 +108,22 @@ export default function NoteView({ note, notes, onBack }: { note: Note; notes: N
                 <p className="mt-2 font-mono text-[12px] text-[#888]">This note doesn&rsquo;t link anywhere yet.</p>
               )}
             </div>
+          </section>
+        )}
+
+        {inStacks.length > 0 && (
+          <section className="mt-12 border-t border-[#666]/30 pt-6">
+            <h2 className="text-[1.5rem]">In stacks</h2>
+            <ul className="mt-2 grid gap-1.5">
+              {inStacks.map((s) => (
+                <li key={s.href}>
+                  <Link href={s.href} className="text-[1.25rem] text-[var(--path-b)] underline decoration-1 underline-offset-2">
+                    {s.stack}
+                  </Link>
+                  {s.layer && <span className="ml-1.5 font-mono text-[11px] text-[#888]">as {s.layer}</span>}
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

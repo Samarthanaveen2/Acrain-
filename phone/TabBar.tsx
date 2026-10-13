@@ -1,11 +1,10 @@
-import { CalendarDays, Network, NotebookPen, Plus, Settings } from "lucide-react";
+import { Layers, NotebookPen, Plus, Settings } from "lucide-react";
 import { navigate } from "./router";
 
 const tabs = [
   { path: "/", label: "Notes", icon: NotebookPen },
-  { path: "/map", label: "Map", icon: Network },
+  { path: "/stacks", label: "Stacks", icon: Layers },
   { path: "/new-note", label: "New", icon: Plus, primary: true },
-  { path: "/timeline", label: "Timeline", icon: CalendarDays },
   { path: "/settings", label: "Settings", icon: Settings },
 ];
 
