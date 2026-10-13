@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Trash2, X } from "lucide-react";
+import { ArrowDownToLine, Columns2, LogIn, Trash2, X } from "lucide-react";
 import { findNote, type Note } from "@/lib/notes";
-import { subtree, THREAT_LABEL, type Layer, type Margin, type Stack, type Threat } from "@/lib/stacks";
+import { pathTo, subtree, THREAT_LABEL, type Layer, type Margin, type Stack, type Threat } from "@/lib/stacks";
 
-/** Everything about one layer: how it works, and what you've noticed about it */
-export default function LayerSheet({
+/** What opens when you tap a slab: its name, big actions, and what you've noticed about it */
+export default function SlabPanel({
   layer,
   stack,
   notes,
   onChange,
   onAddUnder,
+  onSplit,
+  onGoInside,
   onDelete,
   onClose,
 }: {
@@ -21,6 +23,10 @@ export default function LayerSheet({
   notes: Note[];
   onChange: (patch: Partial<Layer>) => void;
   onAddUnder: () => void;
+  /** Add a slab beside this one */
+  onSplit: () => void;
+  /** Make this slab the top of the view */
+  onGoInside: () => void;
   onDelete: () => void;
   onClose: () => void;
 }) {
@@ -38,15 +44,17 @@ export default function LayerSheet({
   const seg = (on: boolean) => `flex-1 px-2 py-1 text-[1.1rem] ${on ? "bg-[#111] text-[#fffff8]" : ""}`;
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col justify-end bg-black/25" onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex flex-col justify-end bg-black/15" onClick={onClose}>
       <div
         role="dialog"
         aria-label={`Layer: ${layer.name || "new layer"}`}
         onClick={(e) => e.stopPropagation()}
-        className="sheet mx-auto max-h-[88dvh] w-full max-w-[700px] overflow-y-auto overscroll-contain rounded-t-2xl border-t-[1.5px] border-[#111] bg-[#fffff8] px-4 pt-3"
+        className="sheet mx-auto max-h-[64dvh] w-full max-w-[700px] overflow-y-auto overscroll-contain rounded-t-2xl border-t-[1.5px] border-[#111] bg-[#fffff8] px-4 pt-3"
       >
         <div className="flex items-center gap-2">
-          <p className="flex-1 font-mono text-[11px] text-[#777]">{isTop ? "Top of the stack" : "Layer"}</p>
+          <p className="min-w-0 flex-1 truncate font-mono text-[11px] text-[#777]">
+            {isTop ? "Top of the stack" : pathTo(stack, layer.id).slice(0, -1).map((l) => l.name || "Untitled").join(" › ")}
+          </p>
           <button type="button" aria-label="Done" onClick={onClose} className="-mr-1 flex items-center gap-1 p-1 text-[1.15rem]">
             Done <X size={18} />
           </button>
@@ -61,6 +69,31 @@ export default function LayerSheet({
           className="mt-1 w-full border-b-[1.5px] border-[#111] bg-transparent py-1 text-[2rem] leading-tight outline-none"
         />
 
+        <div className="mt-4 grid grid-cols-4 gap-2">
+          {[
+            { label: "Add underneath", icon: ArrowDownToLine, on: onAddUnder, off: !layer.name.trim() },
+            { label: "Split", icon: Columns2, on: onSplit, off: isTop || !layer.name.trim() },
+            { label: "Go inside", icon: LogIn, on: onGoInside, off: !kids },
+            { label: confirm ? "Sure?" : "Remove", icon: Trash2, on: () => (confirm || (!isTop && !kids && !layer.name) ? onDelete() : setConfirm(true)), danger: true },
+          ].map((a) => (
+            <button
+              key={a.label}
+              type="button"
+              disabled={a.off}
+              onClick={a.on}
+              className={`slab-action ${a.danger ? "text-[#8b0000]" : ""} ${a.danger && confirm ? "slab-action-confirm" : ""}`}
+            >
+              <a.icon size={20} strokeWidth={1.8} />
+              <span>{a.label}</span>
+            </button>
+          ))}
+        </div>
+        {confirm && (
+          <p className="mt-2 text-[1.1rem] text-[#8b0000]">
+            {isTop ? "This removes the whole stack." : kids ? `This also removes the ${kids} ${kids === 1 ? "layer" : "layers"} under it.` : "Tap again to remove."}
+          </p>
+        )}
+
         <label className={label}>
           How it works
           <textarea
@@ -74,7 +107,7 @@ export default function LayerSheet({
 
         <label className={label}>
           Who&rsquo;s in it
-          <input value={layer.players ?? ""} onChange={(e) => onChange({ players: e.target.value })} placeholder="Companies, people, countries" className={`${input} normal-case`} />
+          <input value={layer.players ?? ""} onChange={(e) => onChange({ players: e.target.value })} placeholder="Companies, people, countries" className={`${input} font-serif normal-case tracking-normal`} />
         </label>
 
         <p className={label}>How much money stays here</p>
@@ -172,31 +205,7 @@ export default function LayerSheet({
           </div>
         )}
 
-        <div className="mt-6 flex gap-2 border-t border-[#666]/20 pt-3 pb-[calc(1rem+var(--safe-bottom))]">
-          <button
-            type="button"
-            onClick={onAddUnder}
-            disabled={!layer.name.trim()}
-            className="flex items-center gap-1.5 rounded-md border-[1.5px] border-[#111] px-3 py-1.5 text-[1.2rem] disabled:opacity-40"
-          >
-            <Plus size={16} /> Add a layer under
-          </button>
-          <span className="flex-1" />
-          {confirm ? (
-            <button type="button" onClick={onDelete} className="rounded-md bg-[#8b0000] px-3 py-1.5 text-[1.15rem] text-[#fffff8]">
-              {isTop ? "Delete the whole stack" : kids ? `Delete with ${kids} under it` : "Delete"}
-            </button>
-          ) : (
-            <button
-              type="button"
-              aria-label={isTop ? "Delete stack" : "Delete layer"}
-              onClick={() => (isTop || kids || layer.name ? setConfirm(true) : onDelete())}
-              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[1.15rem] text-[#8b0000]"
-            >
-              <Trash2 size={16} />
-            </button>
-          )}
-        </div>
+        <div className="pb-[calc(1.25rem+var(--safe-bottom))]" />
       </div>
     </div>
   );

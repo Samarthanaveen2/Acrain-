@@ -191,3 +191,68 @@ export function layersForNote(stacks: Stack[], title: string) {
   const t = title.trim().toLowerCase();
   return stacks.flatMap((s) => s.layers.filter((l) => l.note?.trim().toLowerCase() === t).map((layer) => ({ stack: s, layer })));
 }
+
+// ---- The tower: slabs whose width is how much they hold up ----
+
+/** How many bottom-most layers sit under this one (itself if nothing does) */
+export function leafCount(stack: Stack, id: string): number {
+  const kids = children(stack, id);
+  return kids.length ? kids.reduce((n, k) => n + leafCount(stack, k.id), 0) : 1;
+}
+
+/** From the top of the stack down to this layer */
+export function pathTo(stack: Stack, id: string): Layer[] {
+  const out: Layer[] = [];
+  let l = stack.layers.find((x) => x.id === id);
+  while (l) {
+    out.unshift(l);
+    l = l.parent ? stack.layers.find((x) => x.id === l!.parent) : undefined;
+  }
+  return out;
+}
+
+/** A new layer right beside this one, sitting on the same thing */
+export function addSibling(stack: Stack, id: string, name: string): { stack: Stack; id: string } {
+  const me = stack.layers.find((l) => l.id === id);
+  if (!me || !me.parent) return addLayer(stack, me?.id ?? null, name);
+  const nid = newId();
+  const layers = [...stack.layers];
+  layers.splice(layers.indexOf(me) + 1, 0, { id: nid, parent: me.parent, name });
+  return { stack: touch(stack, layers), id: nid };
+}
+
+export type Slab = {
+  layer: Layer;
+  /** Position across the tower, in % */
+  left: number;
+  width: number;
+  /** Layers further down that don't fit on screen */
+  deeper: number;
+};
+export type Ghost = { parent: string; left: number; width: number };
+export type TowerRow = { slabs: Slab[]; ghosts: Ghost[] };
+
+/** Rows of slabs from `rootId` down, at most `maxRows` deep, plus empty spots under the bottom layers */
+export function towerRows(stack: Stack, rootId: string, maxRows = 4): { rows: TowerRow[]; leaves: number } {
+  const rows: TowerRow[] = [];
+  const row = (d: number) => (rows[d] ??= { slabs: [], ghosts: [] });
+  const leaves = leafCount(stack, rootId);
+  const place = (id: string, d: number, left: number) => {
+    const layer = stack.layers.find((l) => l.id === id);
+    if (!layer) return;
+    const width = (leafCount(stack, id) / leaves) * 100;
+    const kids = children(stack, id);
+    const deeper = d === maxRows - 1 && kids.length ? subtree(stack, id).size - 1 : 0;
+    row(d).slabs.push({ layer, left, width, deeper });
+    if (!kids.length) row(d + 1).ghosts.push({ parent: id, left, width });
+    else if (d < maxRows - 1) {
+      let x = left;
+      for (const k of kids) {
+        place(k.id, d + 1, x);
+        x += (leafCount(stack, k.id) / leaves) * 100;
+      }
+    }
+  };
+  place(rootId, 0, 0);
+  return { rows, leaves };
+}
