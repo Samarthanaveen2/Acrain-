@@ -238,3 +238,91 @@ export function suggestPairs(graph: Graph, max = 8): Suggestion[] {
   }
   return out.sort((x, y) => y.score - x.score).slice(0, max);
 }
+
+// ---- 3D: the same forces in space, for the night-sky map ----
+export type Positions3 = Record<string, [number, number, number]>;
+
+/** Places every node in 3D. Saved places stay put; new notes start beside something they link to. */
+export function layout3d(graph: Graph, saved: Positions3): Positions3 {
+  const n = graph.nodes.length;
+  const list = graph.nodes.map((node, i) => {
+    const s = saved[node.id];
+    // Fibonacci sphere start, so the first layout is the same every time
+    const y = 1 - ((i + 0.5) / Math.max(n, 1)) * 2;
+    const r = Math.sqrt(1 - y * y);
+    const a = i * 2.399963;
+    const R = 60 * Math.cbrt(n + 1);
+    return {
+      id: node.id,
+      x: s ? s[0] : Math.cos(a) * r * R,
+      y: s ? s[1] : y * R,
+      z: s ? s[2] : Math.sin(a) * r * R,
+      vx: 0,
+      vy: 0,
+      vz: 0,
+      pinned: !!s,
+    };
+  });
+  const byId = new Map(list.map((p) => [p.id, p]));
+  for (const p of list) {
+    if (p.pinned) continue;
+    const e = graph.edges.find((e) => (e.a === p.id && byId.get(e.b)?.pinned) || (e.b === p.id && byId.get(e.a)?.pinned));
+    const anchor = e && byId.get(e.a === p.id ? e.b : e.a);
+    if (anchor) {
+      const t = (p.id.length * 1.7) % (Math.PI * 2);
+      p.x = anchor.x + Math.cos(t) * 60;
+      p.y = anchor.y + Math.sin(t * 1.3) * 40;
+      p.z = anchor.z + Math.sin(t) * 60;
+    }
+  }
+  if (!list.every((p) => p.pinned)) {
+    const pairs = graph.edges.map((e) => [byId.get(e.a)!, byId.get(e.b)!] as const);
+    const steps = 320;
+    for (let step = 0; step < steps; step++) {
+      const heat = 1 - step / steps;
+      for (let i = 0; i < list.length; i++) {
+        for (let j = i + 1; j < list.length; j++) {
+          const a = list[i];
+          const b = list[j];
+          const dx = b.x - a.x || 0.01;
+          const dy = b.y - a.y || 0.01;
+          const dz = b.z - a.z || 0.01;
+          const d2 = dx * dx + dy * dy + dz * dz;
+          const f = (1800 + n * 12) / (d2 * Math.sqrt(d2));
+          a.vx -= dx * f;
+          a.vy -= dy * f;
+          a.vz -= dz * f;
+          b.vx += dx * f;
+          b.vy += dy * f;
+          b.vz += dz * f;
+        }
+      }
+      for (const [a, b] of pairs) {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dz = b.z - a.z;
+        const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+        const f = (d - 70) * 0.025;
+        a.vx += (dx / d) * f;
+        a.vy += (dy / d) * f;
+        a.vz += (dz / d) * f;
+        b.vx -= (dx / d) * f;
+        b.vy -= (dy / d) * f;
+        b.vz -= (dz / d) * f;
+      }
+      for (const p of list) {
+        if (p.pinned) continue;
+        p.vx -= p.x * 0.005;
+        p.vy -= p.y * 0.005;
+        p.vz -= p.z * 0.005;
+        p.x += p.vx * heat;
+        p.y += p.vy * heat;
+        p.z += p.vz * heat;
+        p.vx *= 0.6;
+        p.vy *= 0.6;
+        p.vz *= 0.6;
+      }
+    }
+  }
+  return Object.fromEntries(list.map((p) => [p.id, [p.x, p.y, p.z] as [number, number, number]]));
+}

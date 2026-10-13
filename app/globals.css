@@ -507,3 +507,22 @@ h3 {
 .map-screen {
   height: calc(100dvh - var(--safe-top) - 4.5rem - var(--safe-bottom));
 }
+
+/* 3D map: names next to the stars */
+.map-space-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+  font-family: var(--font-serif);
+  font-size: 12.5px;
+  line-height: 1;
+  color: #f4efdf;
+  text-shadow: 0 0 4px #05070d, 0 0 10px #05070d;
+  transition: opacity 250ms;
+  will-change: transform, opacity;
+}
+.map-space-label[data-on="1"] {
+  font-size: 15px;
+  font-weight: 600;
+}

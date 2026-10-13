@@ -2,19 +2,29 @@
 
 import { forwardRef } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { Link2, X } from "lucide-react";
 import { backlinks, docText, noteLinks, type Note } from "@/lib/notes";
 import type { MapNode } from "@/lib/map";
 
 /** A quick look at the selected dot: first lines, tags, and its neighbours to hop to */
 const PeekCard = forwardRef<
   HTMLDivElement,
-  { node: MapNode; notes: Note[]; neighbours: MapNode[]; onHop: (id: string) => void; onClose: () => void }
->(function PeekCard({ node, notes, neighbours, onHop, onClose }, ref) {
+  {
+    node: MapNode;
+    notes: Note[];
+    neighbours: MapNode[];
+    onHop: (id: string) => void;
+    onClose: () => void;
+    /** Opens the "Link to…" list */
+    onLinkTo?: () => void;
+  }
+>(function PeekCard({ node, notes, neighbours, onHop, onClose, onLinkTo }, ref) {
   const note = node.note;
   const text = note ? (note.doc ? docText(note.doc) : note.body).replace(/\s+/g, " ").trim() : "";
   const out = note ? noteLinks(note).length : 0;
-  const back = note ? backlinks(notes, note).length : notes.filter((n) => noteLinks(n).some((t) => t.toLowerCase() === node.title.toLowerCase())).length;
+  const back = note
+    ? backlinks(notes, note).length
+    : notes.filter((n) => noteLinks(n).some((t) => t.toLowerCase() === node.title.toLowerCase())).length;
 
   return (
     <div
@@ -34,7 +44,9 @@ const PeekCard = forwardRef<
             {note.tags.length > 0 && <span className="text-[var(--accent)]"> · {note.tags.map((t) => `#${t}`).join(" ")}</span>}
           </>
         ) : (
-          <>Not written yet · {back} {back === 1 ? "note points" : "notes point"} here</>
+          <>
+            Not written yet · {back} {back === 1 ? "note points" : "notes point"} here
+          </>
         )}
       </p>
       {text && <p className="mt-1.5 line-clamp-2 text-[1.2rem] leading-snug text-[#444]">{text}</p>}
@@ -56,12 +68,23 @@ const PeekCard = forwardRef<
         </div>
       )}
 
-      <Link
-        href={note ? `/notes/${note.id}` : `/new-note?title=${encodeURIComponent(node.title)}`}
-        className="mt-3 block rounded-md bg-[#111] py-1.5 text-center text-[1.25rem] text-[#fffff8] no-underline"
-      >
-        {note ? "Open note" : "Write this note"}
-      </Link>
+      <div className="mt-3 flex gap-2">
+        {note && onLinkTo && (
+          <button
+            type="button"
+            onClick={onLinkTo}
+            className="flex shrink-0 items-center gap-1.5 rounded-md border-[1.5px] border-[#111] px-3 py-1.5 text-[1.2rem]"
+          >
+            <Link2 size={15} /> Link to…
+          </button>
+        )}
+        <Link
+          href={note ? `/notes/${note.id}` : `/new-note?title=${encodeURIComponent(node.title)}`}
+          className="block flex-1 rounded-md bg-[#111] py-1.5 text-center text-[1.25rem] text-[#fffff8] no-underline"
+        >
+          {note ? "Open note" : "Write this note"}
+        </Link>
+      </div>
     </div>
   );
 });

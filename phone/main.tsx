@@ -13,7 +13,7 @@ import { createNote, deleteNote, saveNote, subscribeNotes } from "./notes-store"
 import { back, navigate, usePath } from "./router";
 import TabBar from "./TabBar";
 import Settings from "./Settings";
-import { saveLayout, useMapLayout } from "./map-store";
+import { saveLayout, saveLayout3d, useMapLayout } from "./map-store";
 
 type Status = "loading" | "offline" | "ready";
 const wrap = "mx-auto max-w-[1166px] px-4 pb-24 min-[731px]:px-8";
@@ -110,8 +110,10 @@ function Screen({ path, status, notes }: { path: string; status: Status; notes: 
     return (
       <NotesMap
         notes={notes}
-        positions={positions}
+        positions={positions?.flat ?? null}
         onSavePositions={saveLayout}
+        positions3={positions?.space ?? null}
+        onSavePositions3={saveLayout3d}
         onOpen={(to) => navigate(to)}
         onLink={async (from, toTitle) => {
           await saveNote(appendSeeAlso(from, toTitle), from.title, notes);

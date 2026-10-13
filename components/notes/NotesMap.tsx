@@ -2,18 +2,24 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Maximize, Sparkles } from "lucide-react";
-import { buildGraph, clusters, colourOf, layout, neighboursOf, themes, UNTAGGED, type Positions } from "@/lib/map";
+import { buildGraph, clusters, colourOf, layout, layout3d, neighboursOf, themes, UNTAGGED, type Positions, type Positions3 } from "@/lib/map";
 import { findNote, noteLinks, type Note } from "@/lib/notes";
 import Link from "next/link";
 import MapCanvas, { type MapHandle } from "./map/MapCanvas";
 import PeekCard from "./map/PeekCard";
 import LooseEnds from "./map/LooseEnds";
+import MapSpace from "./map/MapSpace";
+import LinkPicker from "./map/LinkPicker";
+
+const MODE_KEY = "acrain-map-mode";
 
 /** The Map screen: every note is a dot, links are lines. Pinch, drag, tap to explore. */
 export default function NotesMap({
   notes,
   positions,
   onSavePositions,
+  positions3,
+  onSavePositions3,
   onLink,
   onCreate,
   onOpen,
@@ -21,6 +27,9 @@ export default function NotesMap({
   notes: Note[];
   positions: Positions | null;
   onSavePositions: (p: Positions) => void;
+  /** Where stars sit in the 3D map */
+  positions3?: Positions3 | null;
+  onSavePositions3?: (p: Positions3) => void;
   /** Adds a "See also" link from one note to a title; resolves to an undo */
   onLink?: (from: Note, toTitle: string) => Promise<() => Promise<void>>;
   /** Makes a note with this title (or finds it); resolves to its id */
@@ -30,6 +39,31 @@ export default function NotesMap({
 }) {
   const graph = useMemo(() => layout(buildGraph(notes), positions ?? {}), [notes, positions]);
   const [selected, setSelected] = useState<string | null>(null);
+
+  // 2D or 3D, remembered on this phone; 3D unless the phone can't draw it
+  const [mode, setModeState] = useState<"2d" | "3d">(() => {
+    try {
+      return localStorage.getItem(MODE_KEY) === "2d" ? "2d" : "3d";
+    } catch {
+      return "3d";
+    }
+  });
+  const [noWebGL, setNoWebGL] = useState(false);
+  const space = mode === "3d" && !noWebGL;
+  const setMode = (m: "2d" | "3d") => {
+    setModeState(m);
+    try {
+      localStorage.setItem(MODE_KEY, m);
+    } catch {
+      // private mode: just don't remember
+    }
+  };
+
+  // The night sky: places for every star, kept once worked out so the sky never reshuffles
+  const pos3 = useMemo(() => (positions3 ? layout3d(graph, positions3) : null), [graph, positions3]);
+  useEffect(() => {
+    if (pos3 && positions3 && onSavePositions3 && Object.keys(pos3).some((id) => !positions3[id])) onSavePositions3(pos3);
+  }, [pos3, positions3, onSavePositions3]);
   const canvas = useRef<MapHandle>(null);
   const card = useRef<HTMLDivElement>(null);
   const [cardH, setCardH] = useState(0);
@@ -58,6 +92,9 @@ export default function NotesMap({
   }, [graph, theme, colours]);
 
   const [loose, setLoose] = useState(false);
+  // Which note the "Link to…" list is open for (closes by itself when you pick another)
+  const [pickingFor, setPickingFor] = useState<string | null>(null);
+  const picking = !!selected && pickingFor === selected;
   const looseCount = graph.nodes.filter((n) => !n.note || n.degree === 0).length;
 
   const node = graph.nodes.find((n) => n.id === selected);
@@ -149,31 +186,50 @@ export default function NotesMap({
           </p>
         </div>
         {notes.length > 0 && (
-          <div className="flex gap-2">
+          <div className="flex shrink-0 gap-1.5">
+            <div role="group" aria-label="View" className="flex overflow-hidden rounded-md border-[1.5px] border-[#111] font-mono text-[11px]">
+              {(["2d", "3d"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  aria-pressed={(m === "3d") === space}
+                  onClick={() => {
+                    setSelected(null);
+                    setDraft(null);
+                    setMode(m);
+                  }}
+                  className={`px-2 py-1 ${(m === "3d") === space ? "bg-[#111] text-[#fffff8]" : ""}`}
+                >
+                  {m.toUpperCase()}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
+              aria-label="Loose ends"
               aria-pressed={loose}
               onClick={() => {
                 setSelected(null);
                 setDraft(null);
                 setLoose((v) => !v);
               }}
-              className={`flex items-center gap-1.5 rounded-md border-[1.5px] border-[#111] px-2.5 py-1 text-[1.15rem] ${loose ? "bg-[#111] text-[#fffff8]" : ""}`}
+              className={`flex items-center gap-1 rounded-md border-[1.5px] border-[#111] px-2 py-1 text-[1.15rem] ${loose ? "bg-[#111] text-[#fffff8]" : ""}`}
             >
-              <Sparkles size={15} /> Loose ends
+              <Sparkles size={15} />
               {looseCount > 0 && (
                 <span className={`font-mono text-[10px] ${loose ? "text-[#fffff8]/70" : "text-[#888]"}`}>{looseCount}</span>
               )}
             </button>
             <button
               type="button"
+              aria-label="Fit"
               onClick={() => {
                 setSelected(null);
                 canvas.current?.fit();
               }}
-              className="flex items-center gap-1.5 rounded-md border-[1.5px] border-[#111] px-2.5 py-1 text-[1.15rem]"
+              className="flex items-center rounded-md border-[1.5px] border-[#111] px-2 py-1"
             >
-              <Maximize size={15} /> Fit
+              <Maximize size={15} />
             </button>
           </div>
         )}
@@ -212,8 +268,26 @@ export default function NotesMap({
       {notes.length === 0 ? (
         <p className="mt-6 font-mono text-[13px] text-[#777]">Write a few notes and link them to see the map.</p>
       ) : (
-        <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border-[1.5px] border-[#c9c9bf] bg-[#fffff8]">
-          {positions && (
+        <div
+          className={`relative min-h-0 flex-1 overflow-hidden ${
+            space ? "-mx-2 rounded-xl bg-[#05070d] min-[731px]:mx-0" : "rounded-lg border-[1.5px] border-[#c9c9bf] bg-[#fffff8]"
+          }`}
+        >
+          {space && pos3 && (
+            <MapSpace
+              ref={canvas}
+              graph={graph}
+              positions={pos3}
+              selected={selected}
+              onSelect={setSelected}
+              colours={colours}
+              theme={theme}
+              halos={halos}
+              bottomInset={cardH}
+              onUnavailable={() => setNoWebGL(true)}
+            />
+          )}
+          {!space && positions && (
             <MapCanvas
               ref={canvas}
               graph={graph}
@@ -246,15 +320,42 @@ export default function NotesMap({
               onClose={() => setLoose(false)}
             />
           )}
-          {node && !loose && (
-            <PeekCard ref={card} node={node} notes={notes} neighbours={neighbours} onHop={hop} onClose={() => setSelected(null)} />
+          {node && !loose && !picking && (
+            <PeekCard
+              ref={card}
+              node={node}
+              notes={notes}
+              neighbours={neighbours}
+              onHop={hop}
+              onClose={() => setSelected(null)}
+              onLinkTo={onLink ? () => setPickingFor(selected) : undefined}
+            />
           )}
-          {!node && !draft && !loose && (
-            <p className="pointer-events-none absolute inset-x-0 bottom-2 text-center font-mono text-[10.5px] text-[#999]">
-              {selected ? "" : "Tap a dot · hold empty space to add · pinch to zoom"}
+          {node && picking && (
+            <LinkPicker
+              from={node}
+              nodes={graph.nodes}
+              linked={near}
+              onPick={(id) => {
+                setPickingFor(null);
+                link(node.id, id);
+              }}
+              onClose={() => setPickingFor(null)}
+            />
+          )}
+          {!node && !draft && !loose && !picking && (
+            <p
+              className={`pointer-events-none absolute inset-x-0 bottom-2 text-center font-mono text-[10.5px] ${space ? "text-[#8d93a6]" : "text-[#999]"}`}
+            >
+              {space ? "Drag to spin · pinch to zoom · tap a star" : "Tap a dot · hold empty space to add · pinch to zoom"}
             </p>
           )}
-          {node?.note && !toast && (
+          {noWebGL && mode === "3d" && !toast && (
+            <p className="pointer-events-none absolute inset-x-0 top-2 text-center font-mono text-[10.5px] text-[#999]">
+              3D isn&rsquo;t available on this device, so here&rsquo;s the flat map
+            </p>
+          )}
+          {node?.note && !toast && !space && (
             <p className="pointer-events-none absolute inset-x-0 top-2 text-center font-mono text-[10.5px] text-[#999]">
               Drag the ＋ onto another dot to link them
             </p>
