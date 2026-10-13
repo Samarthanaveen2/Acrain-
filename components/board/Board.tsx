@@ -66,6 +66,7 @@ function loadCam(key: string): Cam | null {
 /** The Playground: an endless board. Tools on the right edge; two fingers move around. */
 export default function Board({
   camKey = "main",
+  onChange,
   board,
   noteTitles,
   onSave,
@@ -74,6 +75,8 @@ export default function Board({
 }: {
   /** Each canvas remembers its own camera */
   camKey?: string;
+  /** Hears about every change straight away (saving still waits a moment) */
+  onChange?: (shapes: Shape[]) => void;
   board: BoardData | null;
   /** Your notes, for linking boxes to them */
   noteTitles: string[];
@@ -83,13 +86,40 @@ export default function Board({
   focus?: string | null;
 }) {
   const view = useRef<HTMLDivElement>(null);
+  // iOS would otherwise pinch-zoom or bounce the whole app while you work on the canvas
+  useEffect(() => {
+    const el = view.current;
+    if (!el) return;
+    const stop = (e: Event) => e.preventDefault();
+    el.addEventListener("touchmove", stop, { passive: false });
+    el.addEventListener("gesturestart", stop);
+    el.addEventListener("gesturechange", stop);
+    return () => {
+      el.removeEventListener("touchmove", stop);
+      el.removeEventListener("gesturestart", stop);
+      el.removeEventListener("gesturechange", stop);
+    };
+  }, []);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [cam, setCamState] = useState<Cam>(() => loadCam(camKey) ?? { x: 40, y: 80, k: 1 });
   const camRef = useRef(cam);
+  // Fingers can move faster than the screen redraws: keep the newest camera, and draw it once per frame
+  const frame = useRef(0);
   const setCam = useCallback((c: Cam) => {
     camRef.current = c;
-    setCamState(c);
+    if (frame.current) return;
+    frame.current = requestAnimationFrame(() => {
+      frame.current = 0;
+      setCamState(camRef.current);
+    });
   }, []);
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+  // Handle sizes follow the zoom once it settles; changing them every frame would restyle every shape
+  const [kSettled, setKSettled] = useState(cam.k);
+  useEffect(() => {
+    const t = setTimeout(() => setKSettled(cam.k), 120);
+    return () => clearTimeout(t);
+  }, [cam.k]);
   useEffect(() => {
     const t = setTimeout(() => {
       try {
@@ -121,6 +151,14 @@ export default function Board({
     if (shapes === null && board) setShapes(board.shapes);
   }, [board, shapes]);
 
+  const changeRef = useRef(onChange);
+  useEffect(() => {
+    changeRef.current = onChange;
+  });
+  useEffect(() => {
+    if (shapes) changeRef.current?.(shapes);
+  }, [shapes]);
+
   // Save shortly after any change
   const saveRef = useRef(onSave);
   useEffect(() => {
@@ -145,12 +183,23 @@ export default function Board({
   useEffect(() => {
     latest.current = shapes;
   });
-  useEffect(
-    () => () => {
-      if (latest.current && latest.current !== lastSaved.current) saveRef.current({ shapes: latest.current });
-    },
-    [],
-  );
+  useEffect(() => {
+    const now = () => {
+      if (latest.current && latest.current !== lastSaved.current) {
+        lastSaved.current = latest.current;
+        saveRef.current({ shapes: latest.current });
+      }
+    };
+    // The app going to the background (or being closed) saves straight away
+    const hidden = () => document.visibilityState === "hidden" && now();
+    document.addEventListener("visibilitychange", hidden);
+    window.addEventListener("pagehide", now);
+    return () => {
+      document.removeEventListener("visibilitychange", hidden);
+      window.removeEventListener("pagehide", now);
+      now();
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const el = view.current!;
@@ -586,15 +635,17 @@ export default function Board({
       onPointerCancel={up}
       onWheel={wheel}
     >
-      <div className="bd-world" style={{ transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.k})` }}>
-        {shapes && <LinesLayer shapes={shapes} layer="arrows" selected={selected} k={cam.k} />}
+      <div
+        className="bd-world"
+        style={{ transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.k})`, ["--k" as string]: kSettled }}
+      >
+        {shapes && <LinesLayer shapes={shapes} layer="arrows" selected={selected} />}
         {shapes && <ArrowLabels shapes={shapes} editing={editing} onText={setText} onEditEnd={endEdit} />}
         {shapes && (
           <Shapes
             shapes={visible}
             selected={selected}
             editing={editing}
-            k={cam.k}
             snapped={bump ?? snapped}
             target={target}
             onText={setText}
@@ -603,7 +654,7 @@ export default function Board({
             onOpenNote={onOpenNote}
           />
         )}
-        {shapes && <LinesLayer shapes={shapes} layer="ink" selected={selected} k={cam.k} />}
+        {shapes && <LinesLayer shapes={shapes} layer="ink" selected={selected} />}
         {shapes && <EndDots shapes={shapes} selected={selected} k={cam.k} />}
         <Draft ink={inkDraft ? { ...inkDraft, colour: ink.colour, size: ink.size } : null} arrow={arrowDraft} />
       </div>

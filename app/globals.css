@@ -471,6 +471,10 @@ h3 {
 }
 
 /* ---------- Native app (html.app, set by phone/app-entry.ts) ---------- */
+.app,
+.app body {
+  overscroll-behavior: none;
+}
 .app {
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronLeft, MoreHorizontal, NotebookPen } from "lucide-react";
 import type { Canvas, Shape } from "@/lib/board";
 import Board from "./Board";
@@ -25,12 +25,14 @@ export default function CanvasScreen({
   noteTitles: string[];
   focus?: string | null;
   onSave: (shapes: Shape[]) => void;
-  onRename: (title: string) => void;
+  /** New name, plus the newest drawing (so a rename never brings back an older one) */
+  onRename: (title: string, shapes: Shape[]) => void;
   onDelete: () => void;
   onBack: () => void;
   onOpenNote: (title: string) => void;
 }) {
   const [renaming, setRenaming] = useState(false);
+  const shapesNow = useRef<Shape[]>(canvas.shapes);
   const [name, setName] = useState(title);
   const [menu, setMenu] = useState(false);
   const [confirm, setConfirm] = useState(false);
@@ -46,7 +48,7 @@ export default function CanvasScreen({
             className="min-w-0 flex-1"
             onSubmit={(e) => {
               e.preventDefault();
-              if (name.trim()) onRename(name.trim());
+              if (name.trim()) onRename(name.trim(), shapesNow.current);
               setRenaming(false);
             }}
           >
@@ -56,7 +58,7 @@ export default function CanvasScreen({
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={() => {
-                if (name.trim()) onRename(name.trim());
+                if (name.trim()) onRename(name.trim(), shapesNow.current);
                 setRenaming(false);
               }}
               className="w-full border-b-[1.5px] border-[#111] bg-transparent font-serif text-[1.55rem] outline-none"
@@ -109,6 +111,7 @@ export default function CanvasScreen({
           camKey={canvas.id}
           board={canvas}
           noteTitles={noteTitles}
+          onChange={(shapes) => (shapesNow.current = shapes)}
           onSave={(b) => onSave(b.shapes)}
           onOpenNote={onOpenNote}
           focus={focus}

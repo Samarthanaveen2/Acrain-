@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { NotebookPen } from "lucide-react";
 import { PAINT, STICKY, TEXT_SIZE, type Framed, type Shape } from "@/lib/board";
 
@@ -12,7 +12,6 @@ export default function Shapes({
   shapes,
   selected,
   editing,
-  k,
   snapped,
   target = null,
   onText,
@@ -25,8 +24,6 @@ export default function Shapes({
   target?: string | null;
   selected: string | null;
   editing: string | null;
-  /** Camera zoom, to keep handles a steady size on screen */
-  k: number;
   /** A box that just clicked into a stack (for a little bump) */
   snapped: string | null;
   onText: (id: string, text: string) => void;
@@ -35,6 +32,21 @@ export default function Shapes({
   onMeasure: (id: string, h: number) => void;
   onOpenNote: (title: string) => void;
 }) {
+  // The board hands over new functions every render; give the shapes stable ones so they only
+  // redraw when they themselves change (zooming the canvas then redraws nothing)
+  const cb = useRef({ onText, onEditEnd, onMeasure, onOpenNote });
+  useEffect(() => {
+    cb.current = { onText, onEditEnd, onMeasure, onOpenNote };
+  });
+  const stable = useMemo(
+    () => ({
+      onText: (id: string, t: string) => cb.current.onText(id, t),
+      onEditEnd: () => cb.current.onEditEnd(),
+      onMeasure: (id: string, h: number) => cb.current.onMeasure(id, h),
+      onOpenNote: (t: string) => cb.current.onOpenNote(t),
+    }),
+    [],
+  );
   return (
     <>
       {shapes.map((s) =>
@@ -44,13 +56,12 @@ export default function Shapes({
             s={s}
             on={selected === s.id}
             edit={editing === s.id}
-            k={k}
             bump={snapped === s.id}
             aim={target === s.id}
-            onText={onText}
-            onEditEnd={onEditEnd}
-            onMeasure={onMeasure}
-            onOpenNote={onOpenNote}
+            onText={stable.onText}
+            onEditEnd={stable.onEditEnd}
+            onMeasure={stable.onMeasure}
+            onOpenNote={stable.onOpenNote}
           />
         ) : null,
       )}
@@ -58,11 +69,10 @@ export default function Shapes({
   );
 }
 
-function FramedShape({
+const FramedShape = memo(function FramedShape({
   s,
   on,
   edit,
-  k,
   bump,
   aim,
   onText,
@@ -74,7 +84,6 @@ function FramedShape({
   aim: boolean;
   on: boolean;
   edit: boolean;
-  k: number;
   bump: boolean;
   onText: (id: string, text: string) => void;
   onEditEnd: () => void;
@@ -122,7 +131,9 @@ function FramedShape({
 
   const text = s.text;
   const placeholder = s.type === "box" ? "" : s.type === "sticky" ? "" : "Text";
-  const hs = 13 / k; // handle size on screen ≈ 13px
+  // Sizes that stay the same on screen at any zoom: the world layer sets --k to the zoom level
+  const px = (n: number) => `calc(${n}px / var(--k, 1))`;
+  const hs = 13; // handle size on screen
 
   return (
     <div ref={el} data-shape={s.id} className={cls} style={style}>
@@ -146,7 +157,7 @@ function FramedShape({
           type="button"
           aria-label={`Open note ${s.note}`}
           className="bd-note"
-          style={{ width: 22 / Math.max(k, 0.6), height: 22 / Math.max(k, 0.6) }}
+          style={{ width: "calc(22px / max(var(--k, 1), 0.6))", height: "calc(22px / max(var(--k, 1), 0.6))" }}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
@@ -158,20 +169,20 @@ function FramedShape({
       )}
       {on && !edit && (
         <>
-          <span className="bd-outline" style={{ inset: -5 / k, borderWidth: 1.5 / k, borderRadius: 9 / k }} />
+          <span className="bd-outline" style={{ inset: px(-5), borderWidth: px(1.5), borderRadius: px(9) }} />
           {CORNERS.map((c) => (
             <span
               key={c}
               data-handle={c}
               className="bd-handle"
               style={{
-                width: hs,
-                height: hs,
-                borderWidth: 1.5 / k,
-                left: c.endsWith("w") ? -hs / 2 - 5 / k : undefined,
-                right: c.endsWith("e") ? -hs / 2 - 5 / k : undefined,
-                top: c.startsWith("n") ? -hs / 2 - 5 / k : undefined,
-                bottom: c.startsWith("s") ? -hs / 2 - 5 / k : undefined,
+                width: px(hs),
+                height: px(hs),
+                borderWidth: px(1.5),
+                left: c.endsWith("w") ? px(-hs / 2 - 5) : undefined,
+                right: c.endsWith("e") ? px(-hs / 2 - 5) : undefined,
+                top: c.startsWith("n") ? px(-hs / 2 - 5) : undefined,
+                bottom: c.startsWith("s") ? px(-hs / 2 - 5) : undefined,
               }}
             />
           ))}
@@ -179,4 +190,4 @@ function FramedShape({
       )}
     </div>
   );
-}
+});

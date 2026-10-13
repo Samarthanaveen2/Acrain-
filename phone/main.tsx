@@ -37,12 +37,17 @@ function useNotes() {
 }
 
 type Canvases = { status: "loading" | "ready"; canvases: Canvas[] };
+/** The newest canvases straight from storage, for saves that happen between renders */
+const canvasStore = { latest: [] as Canvas[] };
 function useCanvases() {
   const [state, setState] = useState<Canvases>({ status: "loading", canvases: [] });
   useEffect(() => {
     let stop: (() => void) | undefined;
     let alive = true;
-    subscribeCanvases((canvases) => alive && setState({ status: "ready", canvases })).then((s) => (alive ? (stop = s) : s()));
+    subscribeCanvases((canvases) => {
+      canvasStore.latest = canvases;
+      if (alive) setState({ status: "ready", canvases });
+    }).then((s) => (alive ? (stop = s) : s()));
     return () => {
       alive = false;
       stop?.();
@@ -139,6 +144,8 @@ function Screen({ path, status, notes, canvases }: { path: string; status: Statu
         }}
       />
     );
+  // Always build on the newest stored copy, so a save never undoes a rename (or the other way round)
+  const latestCanvas = (c: Canvas) => canvasStore.latest.find((x) => x.id === c.id) ?? c;
   const cm = route.match(/^\/board\/([^/]+)$/);
   if (cm) {
     const c = canvases.canvases.find((x) => x.id === cm[1]);
@@ -153,8 +160,8 @@ function Screen({ path, status, notes, canvases }: { path: string; status: Statu
         inNote={note?.title}
         noteTitles={notes.map((n) => n.title).sort((a, b) => a.localeCompare(b))}
         focus={new URLSearchParams(query).get("focus")}
-        onSave={(shapes) => saveCanvas({ ...c, shapes })}
-        onRename={(title) => saveCanvas({ ...c, title })}
+        onSave={(shapes) => saveCanvas({ ...latestCanvas(c), shapes })}
+        onRename={(title, shapes) => saveCanvas({ ...latestCanvas(c), title, shapes })}
         onDelete={async () => {
           await deleteCanvas(c.id);
           back();

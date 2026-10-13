@@ -13,9 +13,13 @@ export async function subscribeCanvases(next: (canvases: Canvas[]) => void) {
   let moved = false;
   return db.collection("canvases").onSnapshot(
     (snap) => {
-      const list = snap.docs.map((d) => d.data() as unknown as Canvas).filter((c) => c && c.id && Array.isArray(c.shapes));
-      if (!list.length && !moved) {
+      const raw = snap.docs.map((d) => d.data());
+      const list = raw.map((d) => d as unknown as Canvas).filter((c) => c && c.id && Array.isArray(c.shapes));
+      // The old board is moved over once only, so deleting every canvas never brings it back
+      const done = raw.some((d) => d?.moved === true);
+      if (!list.length && !done && !moved) {
         moved = true;
+        db.doc("canvases/_moved").set({ moved: true });
         let done = false;
         const stop: () => void = db.collection("board").onSnapshot((old) => {
           if (done) return;

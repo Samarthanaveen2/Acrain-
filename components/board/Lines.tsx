@@ -24,7 +24,7 @@ const Ink = memo(function Ink({ s, on }: { s: InkShape; on: boolean }) {
   return <path data-shape={s.id} d={d} fill={on ? "#31566f" : s.colour} className="bd-ink" />;
 });
 
-function Arrow({ s, all, on, k }: { s: ArrowShape; all: Shape[]; on: boolean; k: number }) {
+const Arrow = memo(function Arrow({ s, all, on }: { s: ArrowShape; all: Shape[]; on: boolean }) {
   const a = endPoint(s.from, s.to, all);
   const b = endPoint(s.to, s.from, all);
   const ang = Math.atan2(b.y - a.y, b.x - a.x);
@@ -37,10 +37,19 @@ function Arrow({ s, all, on, k }: { s: ArrowShape; all: Shape[]; on: boolean; k:
       <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={colour} strokeWidth={1.8} strokeLinecap="round" />
       <polygon points={`${b.x},${b.y} ${p1.x},${p1.y} ${p2.x},${p2.y}`} fill={colour} />
       {/* a wide invisible line, so a finger can pick the arrow */}
-      <line data-shape={s.id} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={Math.max(18, 26 / k)} className="bd-hit" />
+      <line
+        data-shape={s.id}
+        x1={a.x}
+        y1={a.y}
+        x2={b.x}
+        y2={b.y}
+        stroke="transparent"
+        style={{ strokeWidth: "max(18px, calc(26px / var(--k, 1)))" }}
+        className="bd-hit"
+      />
     </g>
   );
-}
+});
 
 /** Where the lines layer needs to be: around every arrow and stroke, plus some room */
 function area(mine: Shape[], all: Shape[], extra: Rect | null): Rect {
@@ -73,7 +82,17 @@ function area(mine: Shape[], all: Shape[], extra: Rect | null): Rect {
 }
 
 /** Arrows (under the boxes) or ink (over them), as SVG sized to just what's drawn */
-export function LinesLayer({ shapes, layer, selected, k, draft }: { shapes: Shape[]; layer: "arrows" | "ink"; selected: string | null; k: number; draft?: Rect | null }) {
+export const LinesLayer = memo(function LinesLayer({
+  shapes,
+  layer,
+  selected,
+  draft,
+}: {
+  shapes: Shape[];
+  layer: "arrows" | "ink";
+  selected: string | null;
+  draft?: Rect | null;
+}) {
   const mine = shapes.filter((s) => (layer === "ink" ? s.type === "ink" : s.type === "arrow"));
   if (!mine.length) return null;
   const r = area(mine, shapes, draft ?? null);
@@ -83,12 +102,12 @@ export function LinesLayer({ shapes, layer, selected, k, draft }: { shapes: Shap
         s.type === "ink" ? (
           <Ink key={s.id} s={s} on={selected === s.id} />
         ) : s.type === "arrow" ? (
-          <Arrow key={s.id} s={s} all={shapes} on={selected === s.id} k={k} />
+          <Arrow key={s.id} s={s} all={shapes} on={selected === s.id} />
         ) : null,
       )}
     </svg>
   );
-}
+});
 
 /** Words on arrows, and the box to type them in */
 export function ArrowLabels({
