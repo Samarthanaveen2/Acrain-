@@ -1,0 +1,689 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Acrain OS</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one phone, centered, running a real little OS. A short brief sits beside it on wide screens. */
+:root{
+  color-scheme:dark;
+  --bg:#05060a;          /* page and OLED black */
+  --panel:#0c0e16;       /* app surfaces */
+  --raised:#151826;      /* keys, cells, rows */
+  --line:#262a3c;        /* hairlines */
+  --ink:#f1f2f8;         /* text */
+  --dim:#8d92ab;         /* secondary text */
+  --accent:#8f7bff;      /* set by Settings */
+  --accent2:#38e1c6;     /* second wallpaper tone */
+  --on-accent:#0a0812;
+  --warn:#ff6b6b;
+  --glass:rgba(18,20,32,.55);
+  --glass-line:rgba(255,255,255,.12);
+  --tile:rgba(255,255,255,.09);
+  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:"Instrument Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--body);
+  padding-block:16px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;align-items:center;justify-content:center;gap:64px;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- brief (wide screens only) ---------- */
+.brief{max-width:330px;min-width:0;display:none;flex-direction:column;gap:22px}
+.brief h1{font-family:var(--display);font-weight:700;font-size:54px;line-height:.95;letter-spacing:-.03em;margin:0;text-wrap:balance}
+.brief h1 span{color:var(--accent)}
+.brief p{margin:0;color:var(--dim);font-size:15px;line-height:1.55}
+.brief ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.brief li{font-size:14px;line-height:1.45;color:var(--ink);display:grid;grid-template-columns:86px 1fr;gap:12px;padding-top:12px;border-top:1px solid var(--line)}
+.brief li b{font-family:var(--mono);font-weight:600;font-size:12px;color:var(--accent);letter-spacing:.04em;text-transform:uppercase;padding-top:2px}
+.brief kbd{font-family:var(--mono);font-size:12px;background:var(--raised);border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+@media (min-width:880px){.brief{display:flex}}
+
+/* ---------- device ---------- */
+.device{
+  position:relative;height:100%;max-height:800px;min-height:520px;aspect-ratio:9/19.3;max-width:100%;
+  border-radius:44px;overflow:hidden;background:var(--bg);
+  box-shadow:0 0 0 2px #2a2d3d,0 0 0 9px #0d0e14,0 0 0 10px #2a2d3d,0 40px 90px -20px rgba(0,0,0,.9);
+  container-type:inline-size;user-select:none;-webkit-user-select:none;isolation:isolate;
+}
+#wall{position:absolute;inset:0;width:100%;height:100%;z-index:0;background:radial-gradient(120% 80% at 30% 20%,var(--accent),transparent 60%),radial-gradient(120% 80% at 80% 90%,var(--accent2),transparent 55%),var(--bg)}
+.layer{position:absolute;inset:0}
+
+.status{position:absolute;inset:0 0 auto 0;height:44px;z-index:6;display:flex;align-items:center;justify-content:space-between;padding:6px 26px 0;font-weight:600;font-size:13px;pointer-events:none;font-variant-numeric:tabular-nums}
+.status .right{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+#nowPlaying{pointer-events:auto;display:flex;align-items:flex-end;gap:2px;height:12px;padding:0 2px}
+#nowPlaying i{display:block;width:2.5px;background:var(--accent);border-radius:2px;animation:eq .7s ease-in-out infinite alternate}
+#nowPlaying i:nth-child(1){height:5px}#nowPlaying i:nth-child(2){height:11px;animation-delay:-.3s}#nowPlaying i:nth-child(3){height:7px;animation-delay:-.5s}
+@keyframes eq{to{transform:scaleY(.35)}}
+#nowPlaying i{transform-origin:bottom}
+
+.homebar{position:absolute;left:50%;bottom:0;transform:translateX(-50%);z-index:6;width:46%;height:26px;display:flex;align-items:center;justify-content:center;touch-action:none}
+.homebar::before{content:"";width:100%;height:5px;border-radius:5px;background:var(--ink);opacity:.75;transition:opacity .2s,transform .2s}
+.homebar:active::before{transform:scaleX(.9);opacity:1}
+
+/* ---------- boot ---------- */
+#boot{z-index:5;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .5s}
+#boot.done{opacity:0;pointer-events:none}
+#boot svg{width:26cqw;height:26cqw}
+#boot circle.ring{fill:none;stroke:var(--accent);stroke-width:9;stroke-linecap:round;stroke-dasharray:240;stroke-dashoffset:240;animation:draw 1s .1s cubic-bezier(.6,0,.2,1) forwards;transform:rotate(-90deg);transform-origin:50% 50%}
+#boot circle.dot{fill:var(--accent);opacity:0;animation:pop .4s .8s forwards}
+#boot span{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--dim);text-transform:uppercase}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes pop{to{opacity:1}}
+
+/* ---------- lock ---------- */
+#lock{z-index:4;display:flex;flex-direction:column;align-items:center;padding-top:22cqw;transition:transform .45s cubic-bezier(.3,.8,.2,1),opacity .35s;touch-action:none;cursor:pointer;background:linear-gradient(rgba(5,6,10,.25),rgba(5,6,10,.55))}
+#lock.up{transform:translateY(-100%);opacity:0;pointer-events:none}
+.lock-date{font-size:4.4cqw;font-weight:600;opacity:.85}
+.lock-time{font-family:var(--display);font-weight:800;font-size:31cqw;line-height:.95;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.lock-hint{margin-top:auto;margin-bottom:42px;font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;opacity:.8;animation:rise 2s ease-in-out infinite}
+@keyframes rise{50%{transform:translateY(-6px);opacity:1}}
+
+/* ---------- home ---------- */
+#home{z-index:1;display:flex;flex-direction:column;padding:62px 5.5cqw 34px}
+.widget{padding:2cqw 1.5cqw 0}
+.widget .t{font-family:var(--display);font-weight:800;font-size:23cqw;line-height:.9;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.widget .d{font-size:4.2cqw;font-weight:600;opacity:.85;margin-top:8px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5cqw 0;margin-top:auto;margin-bottom:6cqw}
+.dock{display:grid;grid-template-columns:repeat(4,1fr);padding:3.6cqw 1cqw;border-radius:8.5cqw;background:var(--glass);border:1px solid var(--glass-line);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4)}
+.icon{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:3.05cqw;font-weight:600;letter-spacing:.01em}
+.icon .tile{width:15.6cqw;height:15.6cqw;border-radius:4.4cqw;display:grid;place-items:center;background:var(--glass);border:1px solid var(--glass-line);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);transition:transform .15s}
+.icon:active .tile{transform:scale(.9)}
+.icon svg{width:52%;height:52%;fill:none;stroke:var(--ink);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.dock .icon span{display:none}
+.dock .icon .tile{background:var(--tile);backdrop-filter:none;-webkit-backdrop-filter:none}
+
+/* ---------- app windows ---------- */
+.win{position:absolute;inset:0;z-index:3;background:var(--panel);display:flex;flex-direction:column;padding:44px 0 26px;opacity:0;transform:scale(.15);pointer-events:none;transition:transform .3s cubic-bezier(.2,.9,.25,1),opacity .18s;border-radius:44px}
+.win.open{opacity:1;transform:none;pointer-events:auto}
+.win header{padding:6px 18px 10px;display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.win header h2{margin:0;font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:-.02em}
+.win header small{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:right}
+.win .body{flex:1;min-height:0;position:relative;display:flex;flex-direction:column}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:8px 13px;border-radius:99px;background:var(--raised);border:1px solid var(--line)}
+.pill.on{background:var(--accent);color:var(--on-accent);border-color:transparent;font-weight:600}
+.row{display:flex;gap:8px;align-items:center;padding:10px 14px;flex-wrap:wrap}
+
+/* terminal */
+#term-out{flex:1;min-height:0;overflow-y:auto;padding:4px 16px 8px;font-family:var(--mono);font-size:11.5px;line-height:1.55;white-space:pre-wrap;word-break:break-word;user-select:text;-webkit-user-select:text}
+#term-out .cmd{color:var(--accent)}#term-out .err{color:var(--warn)}#term-out .hi{color:var(--accent2)}#term-out .dim{color:var(--dim)}
+.term-in{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--line);font-family:var(--mono)}
+.term-in b{color:var(--accent);font-size:13px}
+.term-in input{flex:1;min-width:0;background:none;border:0;color:var(--ink);font-family:var(--mono);font-size:16px;outline:none}
+.chips{display:flex;gap:6px;padding:0 14px 8px;overflow-x:auto;scrollbar-width:none}
+.chips button{flex:none;font-family:var(--mono);font-size:11px;padding:6px 10px;border-radius:8px;background:var(--raised);border:1px solid var(--line);color:var(--dim)}
+#matrix{position:absolute;inset:0;width:100%;height:100%;background:var(--bg)}
+
+/* beats */
+.tracks{padding:2px 12px;display:flex;flex-direction:column;gap:9px;touch-action:none}
+.track label{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.steps{display:grid;grid-template-columns:repeat(16,1fr);gap:2px}
+.steps i{display:block;height:34px;border-radius:4px;background:var(--raised);transition:transform .08s}
+.steps i:nth-child(4n+1){background:var(--line)}
+.steps i.on{background:var(--accent)}
+.steps i.now{transform:scaleY(1.18);filter:brightness(1.7)}
+.tempo{flex:1;min-width:90px;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+
+/* canvases */
+.fill{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+.float{position:absolute;left:0;right:0;bottom:6px;justify-content:center;pointer-events:none}
+.float>*{pointer-events:auto}
+.float .pill{background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.float .pill.on{background:var(--accent)}
+
+/* notes */
+.list{flex:1;overflow-y:auto;padding:0 14px;display:flex;flex-direction:column;gap:8px}
+.note{text-align:left;padding:13px 14px;border-radius:14px;background:var(--raised);border:1px solid var(--line);display:flex;flex-direction:column;gap:3px;min-width:0}
+.note b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note span{font-size:12px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#note-edit{flex:1;display:flex;flex-direction:column;min-height:0}
+#note-name{background:none;border:0;border-bottom:1px solid var(--line);color:var(--ink);font-family:var(--display);font-weight:700;font-size:20px;padding:6px 16px 10px;outline:none;width:100%}
+#note-text{flex:1;background:none;border:0;color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;padding:12px 16px;resize:none;outline:none;user-select:text;-webkit-user-select:text}
+
+/* calc */
+#calc-screen{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;padding:8px 20px 14px;min-height:0;overflow:hidden}
+#calc-expr{font-family:var(--mono);font-size:14px;color:var(--dim);min-height:20px;word-break:break-all;text-align:right}
+#calc-val{font-family:var(--display);font-weight:700;font-size:56px;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 14px 8px}
+.keys button{height:58px;border-radius:18px;background:var(--raised);font-size:22px;font-weight:600;font-family:var(--display)}
+.keys button:active{filter:brightness(1.5)}
+.keys .op{color:var(--accent)}
+.keys .eq{background:var(--accent);color:var(--on-accent)}
+
+/* focus */
+.focus{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px}
+.ring{position:relative;width:72cqw;height:72cqw}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:5}
+.ring .bgc{stroke:var(--raised)}
+.ring .fg{stroke:var(--accent);stroke-linecap:round;stroke-dasharray:339.3;transition:stroke-dashoffset .3s linear}
+.ring div{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:19cqw;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+
+/* settings */
+.set{padding:0 16px;display:flex;flex-direction:column;gap:20px;overflow-y:auto}
+.set h3{margin:0 0 10px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.swatches{display:flex;gap:12px}
+.swatches button{width:42px;height:42px;border-radius:50%;border:3px solid transparent;outline:1px solid var(--line)}
+.swatches button.on{border-color:var(--ink)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:9px 12px;font-size:13.5px}
+.kv span:nth-child(even){font-family:var(--mono);font-size:12px;color:var(--dim);text-align:right}
+.set .wide{align-self:flex-start}
+.danger{color:var(--warn);border-color:var(--warn)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:480px){.device{border-radius:34px}.win{border-radius:34px}}
+</style>
+
+<aside class="brief">
+  <h1>Acrain <span>OS</span></h1>
+  <p>A working phone operating system, running in this page. Nothing here is a mockup: every app does what it says, and they talk to each other.</p>
+  <ul>
+    <li><b>Unlock</b><span>Click the lock screen. The wallpaper is computed live on your graphics chip and follows your pointer.</span></li>
+    <li><b>Beats</b><span>Press Play, then paint steps on the grid. Go home and the music keeps running.</span></li>
+    <li><b>Terminal</b><span>Type <kbd>help</kbd>. Try <kbd>beats play</kbd>, <kbd>accent ember</kbd> or <kbd>matrix</kbd>.</span></li>
+    <li><b>Gravity</b><span>Drag through 2,400 particles. Use several fingers on a touch screen.</span></li>
+    <li><b>Home</b><span>Click the bar at the bottom of the phone, or press <kbd>Esc</kbd>.</span></li>
+  </ul>
+</aside>
+
+<div class="device" id="device">
+  <canvas id="wall"></canvas>
+
+  <section class="layer" id="home">
+    <div class="widget"><div class="t" id="w-time">9:41</div><div class="d" id="w-date">&nbsp;</div></div>
+    <div class="grid" id="grid"></div>
+    <div class="dock" id="dock"></div>
+  </section>
+
+  <div id="wins"></div>
+
+  <section class="layer up" id="lock" role="button" tabindex="0" aria-label="Unlock">
+    <div class="lock-date" id="l-date">&nbsp;</div>
+    <div class="lock-time" id="l-time">9:41</div>
+    <div class="lock-hint">Tap to unlock</div>
+  </section>
+
+  <section class="layer" id="boot" hidden>
+    <svg viewBox="0 0 100 100"><circle class="ring" cx="50" cy="50" r="38"/><circle class="dot" cx="50" cy="50" r="9"/></svg>
+    <span>Acrain OS</span>
+  </section>
+
+  <div class="status"><span id="s-time">9:41</span><span class="right"><button id="nowPlaying" hidden aria-label="Open Beats"><i></i><i></i><i></i></button><span id="s-app">Acrain</span></span></div>
+  <button class="homebar" id="homebar" aria-label="Home"></button>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const device = $('#device');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const bootedAt = performance.now();
+
+/* ---------- storage (optional: everything works without it) ---------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('acrain.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('acrain.' + k, JSON.stringify(v)); } catch {} },
+  clear() { try { Object.keys(localStorage).filter(k => k.startsWith('acrain.')).forEach(k => localStorage.removeItem(k)); } catch {} }
+};
+
+const DEFAULT_FILES = {
+  'readme.txt': 'Acrain OS keeps your files on this device.\nNotes live in notes/. The terminal and the Notes app share them.',
+  'notes/welcome.txt': 'Welcome to Acrain OS.\n\nThis note is a real file. Open Terminal and run:\n  cat notes/welcome.txt\n\nOr write a new one from there:\n  echo buy milk > notes/todo.txt',
+  'notes/ideas.txt': 'Things this OS could grow into:\n- a study planner\n- a habit tracker\n- an AI assistant\n- anything you ask for'
+};
+let FS = store.get('fs', null) || { ...DEFAULT_FILES };
+const saveFS = () => store.set('fs', FS);
+
+/* ---------- settings + accent ---------- */
+const ACCENTS = {
+  violet: ['#8f7bff', '#38e1c6'], ember: ['#ff7a4d', '#ffd166'], mint: ['#3fe0a5', '#4d9fff'],
+  rose: ['#ff5d9e', '#9b7bff'], ice: ['#6cc8ff', '#d7f3ff']
+};
+const S = Object.assign({ accent: 'violet', live: true }, store.get('settings', {}));
+if (!ACCENTS[S.accent]) S.accent = 'violet';
+const hex3 = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+function applyAccent(name) {
+  if (!ACCENTS[name]) return false;
+  S.accent = name; store.set('settings', S);
+  document.documentElement.style.setProperty('--accent', ACCENTS[name][0]);
+  document.documentElement.style.setProperty('--accent2', ACCENTS[name][1]);
+  wall.colors(); wall.kick(true);
+  document.querySelectorAll('.swatches button').forEach(b => b.classList.toggle('on', b.dataset.a === name));
+  return true;
+}
+
+/* ---------- live wallpaper: a fragment shader, drawn small and paused whenever it is covered ---------- */
+const wall = (() => {
+  const cv = $('#wall'); let gl, prog, u = {}, raf = 0, last = 0, mx = 0, my = 0, tx = 0, ty = 0, c1 = [0, 0, 0], c2 = [0, 0, 0];
+  const FS_SRC = `precision mediump float;uniform vec2 r;uniform float t;uniform vec3 a;uniform vec3 b;uniform vec2 m;
+  float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+  float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+  float fbm(vec2 p){float v=0.,s=.5;for(int i=0;i<5;i++){v+=s*n(p);p=p*2.03+vec2(1.7,9.2);s*=.5;}return v;}
+  void main(){vec2 uv=(gl_FragCoord.xy-.5*r)/r.y;vec2 q=uv*1.5+m*.35;
+    float k=fbm(q+vec2(0.,t*.05));
+    vec2 w=q+1.9*vec2(fbm(q+k+t*.06),fbm(q-k-t*.05+4.));
+    float f=fbm(w);
+    vec3 c=mix(vec3(.012,.014,.03),a,smoothstep(.22,.72,f));
+    c=mix(c,b,smoothstep(.5,.95,fbm(w*1.6+3.))*.75);
+    c+=.35*a*pow(f,4.);
+    c*=1.05-.7*dot(uv,uv);
+    c+=(h(gl_FragCoord.xy+t)-.5)*.035;
+    gl_FragColor=vec4(c,1.);}`;
+  function init() {
+    try {
+      gl = cv.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'low-power' });
+      if (!gl) return;
+      const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+      prog = gl.createProgram();
+      gl.attachShader(prog, sh(gl.VERTEX_SHADER, 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}'));
+      gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS_SRC));
+      gl.linkProgram(prog); gl.useProgram(prog);
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      for (const n of ['r', 't', 'a', 'b', 'm']) u[n] = gl.getUniformLocation(prog, n);
+    } catch (e) { gl = null; }
+  }
+  function size() { const r = device.getBoundingClientRect(); const w = Math.max(2, Math.round(r.width * .6)), hh = Math.max(2, Math.round(r.height * .6)); if (cv.width !== w || cv.height !== hh) { cv.width = w; cv.height = hh; } }
+  function draw(ts) {
+    if (!gl) return; size();
+    mx += (tx - mx) * .06; my += (ty - my) * .06;
+    gl.viewport(0, 0, cv.width, cv.height);
+    gl.uniform2f(u.r, cv.width, cv.height); gl.uniform1f(u.t, ts / 1000 + 40);
+    gl.uniform3fv(u.a, c1); gl.uniform3fv(u.b, c2); gl.uniform2f(u.m, mx, my);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+  const active = () => gl && !os.cur && !document.hidden && S.live && !reduced;
+  function loop(ts) { raf = 0; if (!active()) return; if (ts - last > 30) { draw(ts); last = ts; } raf = requestAnimationFrame(loop); }
+  return {
+    init, draw,
+    colors() { c1 = hex3(ACCENTS[S.accent][0]); c2 = hex3(ACCENTS[S.accent][1]).map(v => v * .85); },
+    kick(once) { if (!gl) return; if (once || !active()) draw(performance.now()); if (!raf && active()) raf = requestAnimationFrame(loop); },
+    aim(x, y) { tx = x; ty = y; }
+  };
+})();
+
+/* ---------- a small, safe calculator shared by Calc and Terminal ---------- */
+function evaluate(src) {
+  const s = String(src).replace(/\s+/g, '').replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').toLowerCase();
+  let i = 0;
+  const FN = { sqrt: Math.sqrt, sin: Math.sin, cos: Math.cos, tan: Math.tan, ln: Math.log, log: Math.log10, abs: Math.abs };
+  const expr = () => { let v = term(); while (s[i] === '+' || s[i] === '-') { const o = s[i++], r = term(); v = o === '+' ? v + r : v - r; } return v; };
+  const term = () => { let v = unary(); while (s[i] === '*' || s[i] === '/' || s[i] === '%') { const o = s[i++], r = unary(); v = o === '*' ? v * r : o === '/' ? v / r : v % r; } return v; };
+  const unary = () => { if (s[i] === '-') { i++; return -unary(); } if (s[i] === '+') { i++; return unary(); } return pow(); };
+  const pow = () => { const b = atom(); if (s[i] === '^') { i++; return Math.pow(b, unary()); } return b; };
+  const close = v => { if (s[i] !== ')') throw new Error('paren'); i++; return v; };
+  const atom = () => {
+    if (s[i] === '(') { i++; return close(expr()); }
+    const rest = s.slice(i);
+    let m = /^(\d+\.?\d*|\.\d+)/.exec(rest); if (m) { i += m[0].length; return parseFloat(m[0]); }
+    m = /^(sqrt|sin|cos|tan|ln|log|abs)\(/.exec(rest); if (m) { i += m[0].length; return FN[m[1]](close(expr())); }
+    if (rest.startsWith('pi')) { i += 2; return Math.PI; }
+    throw new Error('syntax');
+  };
+  const v = expr();
+  if (i < s.length || !isFinite(v)) throw new Error('syntax');
+  return parseFloat(v.toPrecision(12));
+}
+
+/* ---------- audio engine (Beats + Focus chime) ---------- */
+const audio = (() => {
+  let ctx, out, noise, delay;
+  const A = {
+    playing: false, bpm: 112, step: 0, next: 0, timer: 0, queue: [], onChange: null,
+    names: ['Kick', 'Snare', 'Hat', 'Bass', 'Pluck'],
+    grid: store.get('beat', null) || [
+      [1,0,0,0, 1,0,0,0, 1,0,0,1, 1,0,0,0],
+      [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1],
+      [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,1,1,0],
+      [1,0,0,1, 0,0,1,0, 0,0,1,1, 0,0,1,0],
+      [1,0,1,0, 0,1,0,1, 1,0,0,1, 0,0,1,0]
+    ],
+    bass: [55,55,65.4,55,73.4,55,82.4,55,55,98,82.4,73.4,55,65.4,55,82.4],
+    lead: [440,523.25,659.25,587.33,440,783.99,659.25,523.25,880,659.25,587.33,523.25,440,659.25,783.99,587.33]
+  };
+  function ensure() {
+    if (!ctx) {
+      const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
+      ctx = new C();
+      out = ctx.createDynamicsCompressor(); out.threshold.value = -14; out.ratio.value = 5;
+      const master = ctx.createGain(); master.gain.value = .8; out.connect(master); master.connect(ctx.destination);
+      const len = ctx.sampleRate; noise = ctx.createBuffer(1, len, len); const d = noise.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      delay = ctx.createDelay(1); const fb = ctx.createGain(); fb.gain.value = .38; const wet = ctx.createGain(); wet.gain.value = .35;
+      delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(out);
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  const env = (t, peak, dur) => { const g = ctx.createGain(); g.gain.setValueAtTime(peak, t); g.gain.exponentialRampToValueAtTime(.001, t + dur); return g; };
+  function hit(track, step, t) {
+    if (!ensure()) return;
+    if (track === 0) { const o = ctx.createOscillator(), g = env(t, 1, .32); o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(42, t + .12); o.connect(g); g.connect(out); o.start(t); o.stop(t + .34); }
+    else if (track === 1 || track === 2) {
+      const s = ctx.createBufferSource(); s.buffer = noise; const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = track === 1 ? 1400 : 7500;
+      const g = env(t, track === 1 ? .55 : .22, track === 1 ? .17 : .045); s.connect(f); f.connect(g); g.connect(out); s.start(t, Math.random() * .5); s.stop(t + .2);
+      if (track === 1) { const o = ctx.createOscillator(), g2 = env(t, .3, .09); o.type = 'triangle'; o.frequency.value = 190; o.connect(g2); g2.connect(out); o.start(t); o.stop(t + .1); }
+    } else if (track === 3) {
+      const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = A.bass[step]; const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 6;
+      f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(140, t + .18); const g = env(t, .5, .24); o.connect(f); f.connect(g); g.connect(out); o.start(t); o.stop(t + .26);
+    } else {
+      const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = A.lead[step]; const f = ctx.createBiquadFilter(); f.type = 'lowpass';
+      f.frequency.setValueAtTime(3200, t); f.frequency.exponentialRampToValueAtTime(500, t + .2); const g = env(t, .16, .28); o.connect(f); f.connect(g); g.connect(out); g.connect(delay); o.start(t); o.stop(t + .3);
+    }
+  }
+  function tick() {
+    delay.delayTime.value = 60 / A.bpm * .75;
+    while (A.next < ctx.currentTime + .12) {
+      for (let tr = 0; tr < 5; tr++) if (A.grid[tr][A.step]) hit(tr, A.step, A.next);
+      A.queue.push({ s: A.step, t: A.next }); if (A.queue.length > 32) A.queue.shift();
+      A.next += 60 / A.bpm / 4; A.step = (A.step + 1) % 16;
+    }
+  }
+  A.play = () => { if (A.playing || !ensure()) return false; A.playing = true; A.step = 0; A.queue.length = 0; A.next = ctx.currentTime + .06; tick(); A.timer = setInterval(tick, 25); A.onChange && A.onChange(); return true; };
+  A.stop = () => { if (!A.playing) return; A.playing = false; clearInterval(A.timer); A.queue.length = 0; A.onChange && A.onChange(); };
+  A.preview = (tr, st) => { if (ensure()) hit(tr, st, ctx.currentTime + .01); };
+  A.now = () => ctx ? ctx.currentTime : 0;
+  A.save = () => store.set('beat', A.grid);
+  A.chime = () => { if (!ensure()) return; [659.25, 880, 1318.5].forEach((fq, k) => { const t = ctx.currentTime + .05 + k * .16, o = ctx.createOscillator(), g = env(t, .3, .9); o.type = 'sine'; o.frequency.value = fq; o.connect(g); g.connect(out); g.connect(delay); o.start(t); o.stop(t + 1); }); };
+  A.unlock = ensure;
+  return A;
+})();
+
+/* ---------- apps ---------- */
+const ICON = {
+  terminal: '<path d="M5 8l4 4-4 4M12 16h7"/>',
+  beats: '<path d="M5 18V9M10 18V5M15 18v-7M20 18V8"/>',
+  gravity: '<circle cx="12" cy="12" r="2.4"/><ellipse cx="12" cy="12" rx="9.5" ry="4" transform="rotate(-30 12 12)"/>',
+  mirror: '<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/>',
+  notes: '<path d="M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2zM9 9h6M9 13h6M9 17h3"/>',
+  calc: '<path d="M5 8h5M7.5 5.5v5M14 8h5M5.5 14.5l4 4M9.5 14.5l-4 4M14 15h5M14 18.5h5"/>',
+  focus: '<circle cx="12" cy="13.5" r="7"/><path d="M12 9.5v4l2.5 2M10 3h4"/>',
+  settings: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>'
+};
+const APPS = {};
+/* clientWidth ignores the window's opening zoom, so the canvas gets its true size */
+const canvasFit = cv => { const d = Math.min(window.devicePixelRatio || 1, 2); cv.width = Math.round(cv.clientWidth * d); cv.height = Math.round(cv.clientHeight * d); return d; };
+
+/* Terminal */
+APPS.terminal = {
+  name: 'Terminal', tag: 'ash 1.0',
+  mount(body) {
+    body.innerHTML = '<div id="term-out"></div><div class="chips"></div><form class="term-in"><b>›</b><input id="term-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Command"></form>';
+    const out = $('#term-out', body), input = $('#term-input', body), hist = []; let hi = 0;
+    const print = (text, cls) => { const d = el('div', cls); d.textContent = text; out.appendChild(d); out.scrollTop = out.scrollHeight; };
+    this.focus = () => { if (matchMedia('(pointer:fine)').matches) input.focus(); };
+    const names = Object.keys(APPS);
+    const CMD = {
+      help: () => print(['help            this list', 'apps            list apps', 'open <app>      launch an app', 'ls [dir]        list files', 'cat <file>      print a file', 'echo <text> [> file]   print or write', 'rm <file>       delete a file', 'calc <expr>     e.g. calc sqrt(2)^2*(3+4)', 'beats play|stop|bpm <n>', 'accent <name>   ' + Object.keys(ACCENTS).join(' '), 'neofetch        system summary', 'matrix          you know', 'date  uptime  whoami  lock  clear'].join('\n')),
+      apps: () => print(names.join('  '), 'hi'),
+      open: a => { if (!APPS[a]) return print('no such app: ' + (a || '?') + '. Try: apps', 'err'); if (a === 'terminal') return print('already here'); os.switchTo(a); },
+      ls: d => { const p = d ? d.replace(/\/?$/, '/') : ''; const seen = new Set(); Object.keys(FS).filter(f => f.startsWith(p)).forEach(f => { const rest = f.slice(p.length), i = rest.indexOf('/'); seen.add(i < 0 ? rest : rest.slice(0, i + 1)); }); seen.size ? print([...seen].sort().join('\n')) : print('nothing in ' + (d || '/'), 'err'); },
+      cat: f => f in FS ? print(FS[f]) : print('no such file: ' + (f || '?'), 'err'),
+      rm: f => { if (!(f in FS)) return print('no such file: ' + (f || '?'), 'err'); delete FS[f]; saveFS(); print('removed ' + f, 'dim'); },
+      calc: (...a) => { try { print(String(evaluate(a.join(''))), 'hi'); } catch { print('could not read that expression', 'err'); } },
+      beats: (a, b) => { if (a === 'play') print(audio.play() ? 'playing at ' + audio.bpm + ' bpm' : 'already playing', 'hi'); else if (a === 'stop') { audio.stop(); print('stopped', 'dim'); } else if (a === 'bpm' && +b >= 60 && +b <= 180) { audio.bpm = Math.round(+b); audio.onChange && audio.onChange(); print('tempo ' + audio.bpm, 'hi'); } else print('usage: beats play | stop | bpm 60-180', 'err'); },
+      accent: a => applyAccent(a) ? print('accent set to ' + a, 'hi') : print('choose one of: ' + Object.keys(ACCENTS).join(' '), 'err'),
+      date: () => print(new Date().toString()),
+      uptime: () => print('up ' + fmtUptime()),
+      whoami: () => print('you. this whole thing runs on your device.'),
+      sudo: () => print('you are already root here. it is your OS.', 'hi'),
+      lock: () => os.lock(),
+      clear: () => { out.textContent = ''; },
+      neofetch: () => { const r = device.getBoundingClientRect(); print(['   ◜◝     acrain@os', '  ◜ ● ◝   ---------', '   ◟◞     OS      Acrain OS 0.1', '          Shell   ash 1.0', '          Screen  ' + Math.round(r.width) + '×' + Math.round(r.height) + ' @' + (window.devicePixelRatio || 1) + 'x', '          Cores   ' + (navigator.hardwareConcurrency || '?'), '          Files   ' + Object.keys(FS).length, '          Accent  ' + S.accent, '          Uptime  ' + fmtUptime()].join('\n'), 'hi'); },
+      matrix: () => {
+        const cv = el('canvas'); cv.id = 'matrix'; body.appendChild(cv); const d = canvasFit(cv), g = cv.getContext('2d'), fs = 13 * d, cols = Math.ceil(cv.width / fs), y = Array.from({ length: cols }, () => Math.random() * -40);
+        const glyphs = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ0123456789ACRAIN'; let alive = true, last = 0;
+        const stop = () => { alive = false; cv.remove(); print('wake up.', 'dim'); };
+        cv.addEventListener('pointerdown', stop); const tm = setTimeout(() => alive && stop(), 9000);
+        (function f(ts) { if (!alive) { clearTimeout(tm); return; } if (os.cur !== 'terminal') { stop(); clearTimeout(tm); return; } if (ts - last > 45) { last = ts; g.fillStyle = 'rgba(5,6,10,.12)'; g.fillRect(0, 0, cv.width, cv.height); g.font = fs + 'px monospace'; for (let i = 0; i < cols; i++) { g.fillStyle = Math.random() > .95 ? '#fff' : ACCENTS[S.accent][1]; g.fillText(glyphs[Math.random() * glyphs.length | 0], i * fs, y[i] * fs); if (y[i] * fs > cv.height && Math.random() > .96) y[i] = 0; y[i]++; } } requestAnimationFrame(f); })(0);
+      }
+    };
+    const run = line => {
+      line = line.trim(); if (!line) return; print('› ' + line, 'cmd'); hist.push(line); hi = hist.length;
+      const m = /^echo\s+(.*?)(?:\s*>\s*(\S+))?$/.exec(line);
+      if (m) { if (m[2]) { FS[m[2]] = m[1]; saveFS(); print('wrote ' + m[2], 'dim'); } else print(m[1]); return; }
+      const [c, ...args] = line.split(/\s+/);
+      if (CMD[c.toLowerCase()]) CMD[c.toLowerCase()](...args);
+      else { try { print(String(evaluate(line)), 'hi'); } catch { print('command not found: ' + c + '. Type help', 'err'); } }
+    };
+    body.querySelector('form').addEventListener('submit', e => { e.preventDefault(); run(input.value); input.value = ''; });
+    input.addEventListener('keydown', e => { if (e.key === 'ArrowUp' && hi > 0) { input.value = hist[--hi]; e.preventDefault(); } else if (e.key === 'ArrowDown') { input.value = hist[++hi] || ''; hi = Math.min(hi, hist.length); } });
+    const chips = $('.chips', body);
+    ['help', 'neofetch', 'beats play', 'accent ember', 'ls notes', 'matrix', 'calc 2^10'].forEach(c => { const b = el('button'); b.type = 'button'; b.textContent = c; b.onclick = () => { if (c.startsWith('beats')) audio.unlock(); run(c); }; chips.appendChild(b); });
+    print('Acrain OS 0.1', 'hi'); print('Type help, or tap a command below.', 'dim');
+  },
+  show() { this.focus(); }
+};
+
+/* Beats */
+APPS.beats = {
+  name: 'Beats', tag: '16 steps',
+  mount(body) {
+    body.innerHTML = '<div class="tracks" id="tracks"></div><div class="row"><button class="pill on" id="b-play">Play</button><button class="pill" id="b-rand">Shuffle</button><button class="pill" id="b-clear">Clear</button></div><div class="row"><label class="tempo" for="b-bpm"><span id="b-bpmv">112 bpm</span><input type="range" id="b-bpm" min="70" max="170" value="112"></label></div>';
+    const tracks = $('#tracks', body), cells = [];
+    audio.names.forEach((n, tr) => { const t = el('div', 'track', '<label>' + n + '</label>'), s = el('div', 'steps'); cells[tr] = []; for (let i = 0; i < 16; i++) { const c = el('i'); c.dataset.t = tr; c.dataset.s = i; s.appendChild(c); cells[tr][i] = c; } t.appendChild(s); tracks.appendChild(t); });
+    const paint = () => cells.forEach((row, tr) => row.forEach((c, i) => c.classList.toggle('on', !!audio.grid[tr][i])));
+    let brush = null;
+    const touch = e => { const c = document.elementFromPoint(e.clientX, e.clientY); if (!c || c.dataset.s == null || !tracks.contains(c)) return; const tr = +c.dataset.t, st = +c.dataset.s; if (brush === null) brush = audio.grid[tr][st] ? 0 : 1; if (audio.grid[tr][st] === brush) return; audio.grid[tr][st] = brush; c.classList.toggle('on', !!brush); if (brush && !audio.playing) audio.preview(tr, st); audio.save(); };
+    tracks.addEventListener('pointerdown', e => { brush = null; tracks.setPointerCapture(e.pointerId); touch(e); });
+    tracks.addEventListener('pointermove', e => { if (brush !== null) touch(e); });
+    const end = () => { brush = null; }; tracks.addEventListener('pointerup', end); tracks.addEventListener('pointercancel', end);
+    const play = $('#b-play', body), bpm = $('#b-bpm', body), bpmv = $('#b-bpmv', body);
+    play.onclick = () => audio.playing ? audio.stop() : audio.play();
+    $('#b-clear', body).onclick = () => { audio.grid.forEach(r => r.fill(0)); audio.save(); paint(); };
+    $('#b-rand', body).onclick = () => { const dens = [.3, .16, .45, .35, .4]; audio.grid.forEach((r, tr) => { for (let i = 0; i < 16; i++) r[i] = Math.random() < dens[tr] ? 1 : 0; }); audio.grid[0][0] = 1; audio.save(); paint(); };
+    bpm.oninput = () => { audio.bpm = +bpm.value; bpmv.textContent = audio.bpm + ' bpm'; };
+    let col = -1, raf = 0;
+    const head = () => { raf = 0; if (!audio.playing || os.cur !== 'beats') { mark(-1); return; } const now = audio.now(); let s = col; while (audio.queue.length && audio.queue[0].t <= now) s = audio.queue.shift().s; mark(s); raf = requestAnimationFrame(head); };
+    const mark = s => { if (s === col) return; cells.forEach(r => { if (col >= 0) r[col].classList.remove('now'); if (s >= 0) r[s].classList.add('now'); }); col = s; };
+    this.sync = () => { play.textContent = audio.playing ? 'Stop' : 'Play'; play.classList.toggle('on', !audio.playing); bpm.value = audio.bpm; bpmv.textContent = audio.bpm + ' bpm'; if (!raf) raf = requestAnimationFrame(head); };
+    paint();
+  },
+  show() { this.sync(); }
+};
+
+/* Gravity */
+APPS.gravity = {
+  name: 'Gravity', tag: '2,400 particles',
+  mount(body) {
+    body.innerHTML = '<canvas class="fill" id="grav"></canvas><div class="row float"><button class="pill" id="g-mode">Attract</button><button class="pill" id="g-burst">Scatter</button></div>';
+    const cv = $('#grav', body), g = cv.getContext('2d'), N = 2400, x = new Float32Array(N), y = new Float32Array(N), vx = new Float32Array(N), vy = new Float32Array(N), ptr = new Map();
+    let W = 0, H = 0, d = 1, sign = 1, raf = 0;
+    const scatter = () => { for (let i = 0; i < N; i++) { x[i] = Math.random() * W; y[i] = Math.random() * H; vx[i] = (Math.random() - .5) * 3 * d; vy[i] = (Math.random() - .5) * 3 * d; } };
+    const pos = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * d, (e.clientY - r.top) * d]; };
+    cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, pos(e)); });
+    cv.addEventListener('pointermove', e => { if (ptr.has(e.pointerId)) ptr.set(e.pointerId, pos(e)); });
+    const up = e => ptr.delete(e.pointerId); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    $('#g-burst', body).onclick = scatter;
+    const mode = $('#g-mode', body); mode.onclick = () => { sign = -sign; mode.textContent = sign > 0 ? 'Attract' : 'Repel'; mode.classList.toggle('on', sign < 0); };
+    const frame = ts => {
+      raf = 0; if (os.cur !== 'gravity' || document.hidden) return;
+      const pts = [...ptr.values()], G = 1500 * d * sign;
+      if (!pts.length) { const t = ts / 1400; pts.push([W / 2 + Math.cos(t) * W * .28, H / 2 + Math.sin(t * 1.3) * H * .22]); }
+      g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.fillStyle = 'rgba(8,9,15,.2)'; g.fillRect(0, 0, W, H);
+      g.globalCompositeOperation = 'lighter'; g.globalAlpha = .6;
+      const s = 1.5 * d, fast = [], lim = 14 * d * d;
+      g.fillStyle = ACCENTS[S.accent][0];
+      for (let i = 0; i < N; i++) {
+        for (let k = 0; k < pts.length; k++) { const dx = pts[k][0] - x[i], dy = pts[k][1] - y[i], f = G / (dx * dx + dy * dy + 2600 * d * d); vx[i] += dx * f * .05; vy[i] += dy * f * .05; }
+        vx[i] *= .996; vy[i] *= .996; x[i] += vx[i]; y[i] += vy[i];
+        if (x[i] < 0) { x[i] = 0; vx[i] *= -.6; } else if (x[i] > W) { x[i] = W; vx[i] *= -.6; }
+        if (y[i] < 0) { y[i] = 0; vy[i] *= -.6; } else if (y[i] > H) { y[i] = H; vy[i] *= -.6; }
+        if (vx[i] * vx[i] + vy[i] * vy[i] > lim) fast.push(i); else g.fillRect(x[i], y[i], s, s);
+      }
+      g.fillStyle = ACCENTS[S.accent][1]; for (const i of fast) g.fillRect(x[i], y[i], s, s);
+      raf = requestAnimationFrame(frame);
+    };
+    this.start = () => { if (!W || Math.abs(cv.clientWidth * d - W) > 2) { d = canvasFit(cv); W = cv.width; H = cv.height; scatter(); } if (!raf) raf = requestAnimationFrame(frame); };
+  },
+  show() { this.start(); }
+};
+
+/* Mirror */
+APPS.mirror = {
+  name: 'Mirror', tag: 'symmetry sketch',
+  mount(body) {
+    body.innerHTML = '<canvas class="fill" id="mir"></canvas><div class="row float"><button class="pill" data-n="6">6</button><button class="pill on" data-n="10">10</button><button class="pill" data-n="16">16</button><button class="pill" id="m-clear">Clear</button></div>';
+    const cv = $('#mir', body), g = cv.getContext('2d'); let d = 1, n = 10, hue = 250, last = null, ready = false;
+    const seg = (a, b) => { const cx = cv.width / 2, cy = cv.height / 2; g.strokeStyle = 'hsl(' + (hue = (hue + .8) % 360) + ' 90% 65%)'; for (let k = 0; k < n; k++) for (const flip of [1, -1]) { g.save(); g.translate(cx, cy); g.rotate(k * 2 * Math.PI / n); g.scale(1, flip); g.beginPath(); g.moveTo(a[0] - cx, a[1] - cy); g.lineTo(b[0] - cx, b[1] - cy); g.stroke(); g.restore(); } };
+    const clear = () => { g.globalCompositeOperation = 'source-over'; g.fillStyle = '#08090f'; g.fillRect(0, 0, cv.width, cv.height); g.globalCompositeOperation = 'lighter'; g.lineWidth = 1.2 * d; g.globalAlpha = .7; g.lineCap = 'round'; };
+    const sample = () => { const cx = cv.width / 2, cy = cv.height / 2, R = cv.width * .42; let p = null; for (let t = 0; t <= 1; t += .012) { const a = t * .55, r = R * (.15 + .85 * t) * (.75 + .25 * Math.sin(t * 19)); const q = [cx + Math.cos(a) * r, cy + Math.sin(a) * r * .5]; if (p) seg(p, q); p = q; } };
+    const pos = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * d, (e.clientY - r.top) * d]; };
+    cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); last = pos(e); });
+    cv.addEventListener('pointermove', e => { if (!last) return; const p = pos(e); seg(last, p); last = p; });
+    const up = () => { last = null; }; cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    body.querySelectorAll('[data-n]').forEach(b => b.onclick = () => { n = +b.dataset.n; body.querySelectorAll('[data-n]').forEach(o => o.classList.toggle('on', o === b)); });
+    $('#m-clear', body).onclick = clear;
+    this.start = () => { if (ready) return; ready = true; d = canvasFit(cv); clear(); sample(); };
+  },
+  show() { this.start(); }
+};
+
+/* Notes */
+APPS.notes = {
+  name: 'Notes', tag: 'notes/',
+  mount(body) {
+    body.innerHTML = '<div class="list" id="n-list"></div><div class="row" id="n-bar"><button class="pill on" id="n-new">New note</button></div><div id="note-edit" hidden><input id="note-name" aria-label="Note name" autocomplete="off"><textarea id="note-text" aria-label="Note text"></textarea><div class="row"><button class="pill on" id="n-done">Done</button><button class="pill danger" id="n-del">Delete</button></div></div>';
+    const list = $('#n-list', body), bar = $('#n-bar', body), edit = $('#note-edit', body), name = $('#note-name', body), text = $('#note-text', body); let cur = null;
+    const render = () => { list.textContent = ''; const files = Object.keys(FS).filter(f => f.startsWith('notes/')).sort(); if (!files.length) list.appendChild(el('p', 'dim', 'No notes yet. Tap New note.')); files.forEach(f => { const b = el('button', 'note'); const t = el('b'); t.textContent = f.slice(6).replace(/\.txt$/, ''); const s = el('span'); s.textContent = FS[f].split('\n')[0] || 'Empty'; b.append(t, s); b.onclick = () => open(f); list.appendChild(b); }); };
+    const open = f => { cur = f; name.value = f.slice(6).replace(/\.txt$/, ''); text.value = FS[f]; list.hidden = bar.hidden = true; edit.hidden = false; };
+    const close = () => { cur = null; edit.hidden = true; list.hidden = bar.hidden = false; render(); };
+    text.oninput = () => { if (cur) { FS[cur] = text.value; saveFS(); } };
+    name.onchange = () => { const clean = name.value.trim().replace(/[\/\s]+/g, '-') || 'untitled'; const nf = 'notes/' + clean + '.txt'; if (cur && nf !== cur && !(nf in FS)) { FS[nf] = FS[cur]; delete FS[cur]; cur = nf; saveFS(); } };
+    $('#n-new', body).onclick = () => { let i = 1, f; do { f = 'notes/note-' + i++ + '.txt'; } while (f in FS); FS[f] = ''; saveFS(); open(f); if (matchMedia('(pointer:fine)').matches) text.focus(); };
+    $('#n-done', body).onclick = close;
+    $('#n-del', body).onclick = () => { if (cur) { delete FS[cur]; saveFS(); } close(); };
+    this.refresh = () => { if (!cur) render(); else if (!(cur in FS)) close(); };
+  },
+  show() { this.refresh(); }
+};
+
+/* Calc */
+APPS.calc = {
+  name: 'Calc', tag: '',
+  mount(body) {
+    body.innerHTML = '<div id="calc-screen"><div id="calc-expr"></div><div id="calc-val">0</div></div><div class="keys" id="keys"></div>';
+    const ex = $('#calc-expr', body), val = $('#calc-val', body), keys = $('#keys', body); let s = '', done = false;
+    const show = () => { val.textContent = s || '0'; val.style.fontSize = s.length > 9 ? Math.max(24, 56 - (s.length - 9) * 3.2) + 'px' : ''; };
+    const press = k => {
+      if (k === 'C') { s = ''; ex.textContent = ''; }
+      else if (k === '⌫') s = done ? '' : s.slice(0, -1);
+      else if (k === '=') { if (!s) return; try { const r = evaluate(s); ex.textContent = s + ' ='; s = String(r); done = true; show(); return; } catch { ex.textContent = 'Check the expression'; return; } }
+      else { if (done && /[\d.(]/.test(k)) s = ''; s += k; }
+      done = false; show();
+    };
+    'C ( ) ÷ 7 8 9 × 4 5 6 − 1 2 3 + 0 . ⌫ ='.split(' ').forEach(k => { const b = el('button', /[÷×−+()C⌫]/.test(k) ? 'op' : k === '=' ? 'eq' : ''); b.textContent = k; b.onclick = () => press(k); keys.appendChild(b); });
+    this.key = e => { const map = { '*': '×', '/': '÷', '-': '−', Enter: '=', Backspace: '⌫', c: 'C' }; const k = map[e.key] || e.key; if (/^[\d.()+×÷−=C⌫]$/.test(k)) { press(k); e.preventDefault(); } };
+  }
+};
+
+/* Focus */
+APPS.focus = {
+  name: 'Focus', tag: 'timer',
+  mount(body) {
+    body.innerHTML = '<div class="focus"><div class="row" id="f-presets"><button class="pill on" data-m="25">25 min</button><button class="pill" data-m="5">5 min</button><button class="pill" data-m="0.1">6 sec test</button></div><div class="ring"><svg viewBox="0 0 120 120"><circle class="bgc" cx="60" cy="60" r="54"/><circle class="fg" id="f-arc" cx="60" cy="60" r="54"/></svg><div id="f-time">25:00</div></div><div class="row"><button class="pill on" id="f-go">Start</button><button class="pill" id="f-reset">Reset</button></div></div>';
+    const arc = $('#f-arc', body), tx = $('#f-time', body), go = $('#f-go', body); let total = 1500, left = 1500, end = 0, tm = 0;
+    const draw = () => { const s = Math.ceil(left); tx.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); arc.style.strokeDashoffset = 339.3 * (1 - left / total); };
+    const stop = () => { clearInterval(tm); tm = 0; go.textContent = 'Start'; };
+    const tick = () => { left = Math.max(0, (end - Date.now()) / 1000); draw(); if (left <= 0) { stop(); audio.chime(); tx.textContent = 'Done'; left = total; } };
+    go.onclick = () => { if (tm) { stop(); return; } audio.unlock(); end = Date.now() + left * 1000; tm = setInterval(tick, 250); go.textContent = 'Pause'; };
+    $('#f-reset', body).onclick = () => { stop(); left = total; draw(); };
+    body.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { stop(); total = left = +b.dataset.m * 60; body.querySelectorAll('[data-m]').forEach(o => o.classList.toggle('on', o === b)); draw(); });
+    draw();
+  }
+};
+
+/* Settings */
+APPS.settings = {
+  name: 'Settings', tag: 'v0.1',
+  mount(body) {
+    body.innerHTML = '<div class="set"><div><h3>Accent</h3><div class="swatches" id="sw"></div></div><div><h3>Wallpaper</h3><button class="pill wide" id="s-live"></button></div><div><h3>About this device</h3><div class="kv" id="s-about"></div></div><div><h3>Data</h3><button class="pill danger wide" id="s-reset">Erase notes and settings</button></div></div>';
+    const sw = $('#sw', body); Object.entries(ACCENTS).forEach(([n, c]) => { const b = el('button', n === S.accent ? 'on' : ''); b.dataset.a = n; b.setAttribute('aria-label', n); b.style.background = 'linear-gradient(135deg,' + c[0] + ',' + c[1] + ')'; b.onclick = () => applyAccent(n); sw.appendChild(b); });
+    const live = $('#s-live', body), paintLive = () => { live.textContent = S.live ? 'Live: on (pauses inside apps)' : 'Live: off (saves battery)'; live.classList.toggle('on', S.live); };
+    live.onclick = () => { S.live = !S.live; store.set('settings', S); paintLive(); }; paintLive();
+    const reset = $('#s-reset', body); let armed = 0;
+    reset.onclick = () => { if (!armed) { armed = setTimeout(() => { armed = 0; reset.textContent = 'Erase notes and settings'; }, 3000); reset.textContent = 'Tap again to erase'; return; } clearTimeout(armed); armed = 0; store.clear(); FS = { ...DEFAULT_FILES }; S.live = true; applyAccent('violet'); paintLive(); reset.textContent = 'Erased'; };
+    this.about = () => { const r = device.getBoundingClientRect(), bytes = Object.values(FS).join('').length; $('#s-about', body).innerHTML = ['System', 'Acrain OS 0.1', 'Screen', Math.round(r.width) + ' × ' + Math.round(r.height), 'Files', Object.keys(FS).length + ' (' + bytes + ' bytes)', 'Uptime', fmtUptime(), 'Wallpaper', $('#wall').getContext('webgl') ? 'GPU shader' : 'Still gradient'].map(t => '<span>' + t + '</span>').join(''); };
+  },
+  show() { this.about(); }
+};
+
+function fmtUptime() { const s = Math.floor((performance.now() - bootedAt) / 1000); return (s >= 60 ? Math.floor(s / 60) + 'm ' : '') + (s % 60) + 's'; }
+
+/* ---------- shell: home screen, windows, lock ---------- */
+const os = {
+  cur: null, locked: false,
+  open(id, from) {
+    if (this.cur || this.locked || !APPS[id]) return;
+    const app = APPS[id];
+    if (!app.win) { app.win = el('section', 'win', '<header><h2></h2><small></small></header><div class="body"></div>'); $('h2', app.win).textContent = app.name; $('small', app.win).textContent = app.tag; $('#wins').appendChild(app.win); }
+    const w = app.win, dr = device.getBoundingClientRect(), src = from || $('[data-app="' + id + '"] .tile');
+    if (src) { const r = src.getBoundingClientRect(); w.style.transformOrigin = (r.left + r.width / 2 - dr.left) + 'px ' + (r.top + r.height / 2 - dr.top) + 'px'; }
+    w.hidden = false; void w.offsetWidth; w.classList.add('open');
+    this.cur = id; $('#s-app').textContent = app.name;
+    if (!app.mounted) { app.mount($('.body', w)); app.mounted = true; }
+    app.show && app.show();
+  },
+  home() {
+    const id = this.cur; if (!id) return; const app = APPS[id];
+    app.hide && app.hide(); app.win.classList.remove('open'); if (document.activeElement) document.activeElement.blur();
+    this.cur = null; $('#s-app').textContent = 'Acrain';
+    setTimeout(() => { if (this.cur !== id) app.win.hidden = true; }, 320);
+    wall.kick();
+  },
+  switchTo(id) { this.home(); setTimeout(() => this.open(id), reduced ? 0 : 340); },
+  lock() { this.home(); this.locked = true; $('#lock').classList.remove('up'); },
+  unlock() { this.locked = false; $('#lock').classList.add('up'); audio.onChange && audio.onChange(); }
+};
+
+function iconFor(id) { const b = el('button', 'icon', '<div class="tile"><svg viewBox="0 0 24 24">' + ICON[id] + '</svg></div><span>' + APPS[id].name + '</span>'); b.dataset.app = id; b.setAttribute('aria-label', APPS[id].name); b.onclick = () => os.open(id, $('.tile', b)); return b; }
+['gravity', 'mirror', 'calc', 'focus'].forEach(id => $('#grid').appendChild(iconFor(id)));
+['terminal', 'notes', 'beats', 'settings'].forEach(id => $('#dock').appendChild(iconFor(id)));
+
+/* home gesture: tap or swipe up on the bar */
+const bar = $('#homebar'); let barY = null;
+bar.addEventListener('pointerdown', e => { barY = e.clientY; });
+bar.addEventListener('pointerup', e => { if (barY !== null) { barY = null; os.locked ? os.unlock() : os.home(); } });
+const lockEl = $('#lock');
+lockEl.addEventListener('click', () => os.unlock());
+document.addEventListener('keydown', e => {
+  if (os.locked) { if (!e.metaKey && !e.ctrlKey && e.key !== 'Tab') os.unlock(); return; }
+  if (e.key === 'Escape') { os.home(); return; }
+  if (os.cur === 'calc' && !e.metaKey && !e.ctrlKey) APPS.calc.key(e);
+});
+
+/* now-playing indicator: music survives leaving the app */
+const np = $('#nowPlaying');
+audio.onChange = () => { np.hidden = !audio.playing; if (APPS.beats.mounted) APPS.beats.sync(); };
+np.onclick = () => { if (os.cur !== 'beats') os.cur ? os.switchTo('beats') : os.open('beats'); };
+
+/* clock: one update per minute, nothing in between */
+function clock() {
+  const n = new Date(), t = n.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).replace(/\s?[AP]M/i, ''), d = n.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  $('#s-time').textContent = $('#w-time').textContent = $('#l-time').textContent = t; $('#w-date').textContent = $('#l-date').textContent = d;
+  setTimeout(clock, 60000 - (n.getSeconds() * 1000 + n.getMilliseconds()) + 50);
+}
+
+/* wallpaper follows the pointer on the home and lock screens */
+device.addEventListener('pointermove', e => { if (os.cur) return; const r = device.getBoundingClientRect(); wall.aim((e.clientX - r.left) / r.width - .5, .5 - (e.clientY - r.top) / r.height); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { wall.kick(); const a = os.cur && APPS[os.cur]; a && a.show && a.show(); } });
+addEventListener('resize', () => wall.kick(true));
+
+/* boot */
+wall.init(); applyAccent(S.accent); clock();
+os.locked = true; lockEl.classList.remove('up');
+const boot = $('#boot');
+if (!reduced) { boot.hidden = false; setTimeout(() => boot.classList.add('done'), 1500); setTimeout(() => { boot.hidden = true; }, 2100); }
+wall.kick(true);
+})();
+</script>
