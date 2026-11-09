@@ -1,0 +1,21 @@
+name: Build QuickNote
+
+on:
+  push:
+    paths:
+      - "QuickNote/**"
+      - ".github/workflows/build-quicknote.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build app
+        run: ./QuickNote/build.sh
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuickNote-macOS
+          path: QuickNote/build/QuickNote.zip
